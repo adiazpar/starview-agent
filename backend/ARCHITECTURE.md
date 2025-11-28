@@ -1,0 +1,453 @@
+# Backend Architecture Guide
+
+**Last Updated:** 2025-11-27 | **Status:** 98% Complete | **Production:** https://starview.app
+
+---
+
+## Quick Reference
+
+### Tech Stack
+- Django 5.1.13 + DRF 3.15.2 + PostgreSQL 17.6 + Redis 7.0
+- Cloudflare R2 (media.starview.app) + AWS SES (email)
+- Celery 5.4.0 (optional async) + django-allauth (auth/OAuth)
+- Security: django-axes, django-csp, bleach
+
+### Production Infrastructure (Render.com ~$24/month)
+- **Web:** `starview` - Django/Gunicorn
+- **DB:** `starview-db` - PostgreSQL with daily backups
+- **Cache:** `starview-cache` - Redis (caching, sessions, rate limiting)
+- **Cronjobs:** 3 automated tasks (audit logs, email cleanup, user cleanup)
+- **Media:** Cloudflare R2 (media.starview.app)
+
+### Key Patterns
+- **Service Layer:** Business logic in `starview_app/services/`
+- **ContentTypes:** Generic voting/reporting on any model
+- **Signals:** Auto file cleanup + badge awarding
+- **Nested API:** `/api/locations/{id}/reviews/{id}/comments/`
+- **Caching:** Redis with 96% query reduction on badge progress
+
+---
+
+## Database Models (16 total)
+
+### Core Models (`starview_app/models/`)
+| Model | File | Purpose |
+|-------|------|---------|
+| Location | `model_location.py` | Stargazing sites with auto-enrichment from Mapbox |
+| Review | `model_review.py` | User ratings (1-5 stars), unique per user/location |
+| ReviewComment | `model_review_comment.py` | Threaded comments on reviews |
+| ReviewPhoto | `model_review_photo.py` | Max 5/review, auto-resized to 1920x1920 |
+| UserProfile | `model_user_profile.py` | OneToOne User extension, pinned badges |
+| FavoriteLocation | `model_location_favorite.py` | M2M with optional nicknames |
+| Vote | `model_vote.py` | Generic upvote/downvote (ContentTypes) |
+| Report | `model_report.py` | Generic content reporting (ContentTypes) |
+| Badge | `model_badge.py` | 24 achievements across 7 categories |
+| UserBadge | `model_user_badge.py` | User awards with timestamps |
+| LocationVisit | `model_location_visit.py` | Check-ins for badge progress |
+| Follow | `model_follow.py` | User following relationships (social network) |
+| AuditLog | `model_audit_log.py` | Security audit trail |
+
+### Email Models (`models/email_events/`)
+| Model | Purpose |
+|-------|---------|
+| EmailBounce | AWS SES bounce tracking (hard/soft/transient) |
+| EmailComplaint | Spam complaint tracking |
+| EmailSuppressionList | Master suppression list |
+
+---
+
+## API Endpoints
+
+> **Adding new endpoints?** The `starview-api-endpoint` skill guides through the full backend-to-frontend workflow, including serializers, views, rate limiting, frontend services, and React Query hooks.
+
+### Authentication (`views/views_auth.py`)
+```
+POST /api/auth/register/           - Register (sends verification email)
+POST /api/auth/login/              - Login (email must be verified)
+POST /api/auth/logout/             - Logout
+GET  /api/auth/status/             - Check auth status
+POST /api/auth/resend-verification/- Resend verification email
+POST /api/auth/password-reset/     - Request password reset
+POST /api/auth/password-reset-confirm/{uidb64}/{token}/
+GET  /accounts/google/login/       - Google OAuth
+```
+
+### Locations (`views/views_location.py`)
+```
+GET    /api/locations/                      - List (paginated 20/page)
+POST   /api/locations/                      - Create (auth required)
+GET    /api/locations/{id}/                 - Detail
+PUT    /api/locations/{id}/                 - Update (auth required)
+DELETE /api/locations/{id}/                 - Delete (auth required)
+GET    /api/locations/map_markers/          - Lightweight map data (97% smaller)
+GET    /api/locations/{id}/info_panel/      - Map popup data
+POST   /api/locations/{id}/mark-visited/    - Check-in to location (creates LocationVisit)
+DELETE /api/locations/{id}/unmark-visited/  - Remove check-in
+POST   /api/locations/{id}/report/          - Report location
+```
+
+### Reviews (`views/views_review.py`)
+```
+GET    /api/locations/{id}/reviews/                       - List reviews
+POST   /api/locations/{id}/reviews/                       - Create review
+GET    /api/locations/{id}/reviews/{id}/                  - Review detail
+PUT    /api/locations/{id}/reviews/{id}/                  - Update review
+DELETE /api/locations/{id}/reviews/{id}/                  - Delete review
+POST   /api/locations/{id}/reviews/{id}/add_photos/       - Upload photos (max 5)
+DELETE /api/locations/{id}/reviews/{id}/photos/{photo_id}/ - Delete photo
+POST   /api/locations/{id}/reviews/{id}/vote/             - Upvote/downvote review
+POST   /api/locations/{id}/reviews/{id}/report/           - Report review
+```
+
+### Comments (`views/views_review.py` - nested under reviews)
+```
+GET    /api/locations/{id}/reviews/{id}/comments/           - List comments
+POST   /api/locations/{id}/reviews/{id}/comments/           - Create comment
+GET    /api/locations/{id}/reviews/{id}/comments/{id}/      - Comment detail
+PUT    /api/locations/{id}/reviews/{id}/comments/{id}/      - Update comment
+DELETE /api/locations/{id}/reviews/{id}/comments/{id}/      - Delete comment
+POST   /api/locations/{id}/reviews/{id}/comments/{id}/vote/ - Upvote/downvote comment
+POST   /api/locations/{id}/reviews/{id}/comments/{id}/report/ - Report comment
+```
+
+### User & Profile (`views/views_user.py`)
+```
+GET   /api/users/{username}/                    - Public profile
+GET   /api/users/{username}/reviews/            - User's reviews
+GET   /api/users/me/                            - Current user (private profile)
+POST  /api/users/me/upload-picture/             - Upload profile picture
+DELETE /api/users/me/remove-picture/            - Remove profile picture
+PATCH /api/users/me/update-name/                - Update display name
+PATCH /api/users/me/update-username/            - Update username
+PATCH /api/users/me/update-email/               - Update email (requires verification)
+PATCH /api/users/me/update-password/            - Change password
+PATCH /api/users/me/update-bio/                 - Update bio
+PATCH /api/users/me/update-location/            - Update location (with Mapbox autocomplete)
+GET   /api/users/me/social-accounts/            - List connected OAuth accounts
+DELETE /api/users/me/disconnect-social/{id}/    - Disconnect OAuth account
+```
+
+### Badges (`views/views_badge.py`)
+```
+GET   /api/users/{username}/badges/       - User badge progress (earned, in-progress, locked)
+GET   /api/users/me/badges/collection/    - Current user's badge collection
+PATCH /api/users/me/badges/pin/           - Pin/unpin badges (max 3 displayed on profile)
+```
+
+### Favorites (`views/views_favorite.py`)
+```
+GET    /api/favorite-locations/      - User's favorites
+POST   /api/favorite-locations/      - Add favorite (with optional nickname)
+GET    /api/favorite-locations/{id}/ - Favorite detail
+PUT    /api/favorite-locations/{id}/ - Update nickname
+DELETE /api/favorite-locations/{id}/ - Remove favorite
+```
+
+### Follow System (`views/views_follow.py`)
+```
+POST   /api/users/{username}/follow/       - Follow user
+DELETE /api/users/{username}/follow/       - Unfollow user
+GET    /api/users/{username}/is-following/ - Check if following
+GET    /api/users/{username}/followers/    - List user's followers
+GET    /api/users/{username}/following/    - List users being followed
+```
+
+### Platform Stats (`views/views_stats.py`)
+```
+GET /api/stats/                    - Platform-wide stats (locations, reviews, users)
+```
+
+### Webhooks (`views/views_webhooks.py`)
+```
+POST /api/webhooks/ses-bounce/     - AWS SNS bounce notifications
+POST /api/webhooks/ses-complaint/  - AWS SNS spam complaints
+```
+
+### Health (`views/views_health.py`)
+```
+GET /health/                       - DB, cache, Celery status
+```
+
+---
+
+## Service Layer (`starview_app/services/`)
+
+| Service | Purpose |
+|---------|---------|
+| `badge_service.py` | Badge checking/awarding, Redis-cached progress |
+| `location_service.py` | Mapbox enrichment (address, elevation) |
+| `vote_service.py` | Generic voting logic with toggle |
+| `report_service.py` | Content reporting validation |
+| `password_service.py` | Custom password validators |
+
+---
+
+## Signal Handlers (`starview_app/utils/signals.py`)
+
+**File Cleanup (pre_delete):**
+- `delete_user_profile_picture` - Cleanup profile pics
+- `delete_review_photo_files` - Cleanup images + thumbnails
+- `cleanup_location_directory_structure` - Cleanup on Location CASCADE
+- `cleanup_review_directory_structure` - Cleanup on Review CASCADE
+
+**Badge Awarding (post_save):**
+- `check_badges_on_visit` - LocationVisit created
+- `check_badges_on_location_add` - Location created
+- `check_badges_on_review` - Review created
+- `check_badges_on_vote` - Vote received
+- `check_badges_on_follow` - Follow created
+- `check_badges_on_comment` - Comment created
+- `check_badges_on_photo_upload` - Photo added
+
+**Auto-creation:**
+- `create_or_update_user_profile` - Create UserProfile for new Users
+- `delete_email_confirmation_on_confirm` - Cleanup verification tokens
+
+---
+
+## Security Features
+
+### Rate Limiting (`utils/throttles.py`)
+| Endpoint | Limit |
+|----------|-------|
+| Login | 5/minute |
+| Password Reset | 3/hour |
+| Content Creation | 20/hour |
+| Voting | 60/hour |
+| Reporting | 10/hour |
+| Anonymous API | 100/hour |
+| Authenticated API | 1000/hour |
+
+### Authentication
+- **Email verification required** (django-allauth, 3-day token expiry)
+- **Account lockout:** 5 failed attempts = 1 hour (django-axes)
+- **Password reset:** Secure tokens, 1-hour expiry
+- **Google OAuth:** Social login support
+
+### Input Validation (`utils/validators.py`)
+- File upload: 5MB max, extension whitelist, MIME check, Pillow verification
+- XSS prevention: bleach HTML sanitization
+- Geographic: lat (-90,90), lon (-180,180), elevation (-500m,9000m)
+
+### Headers (A+ securityheaders.com)
+- HSTS (1 year, preload)
+- CSP with Mapbox/R2 allowlist
+- X-Frame-Options: DENY
+- X-Content-Type-Options: nosniff
+
+---
+
+## Email System
+
+### Verification Flow
+1. User registers → verification email sent
+2. User clicks link → EmailAddress.verified = True
+3. Login now allowed
+
+### AWS SES Integration
+- **Bounce tracking:** Hard bounces = immediate suppression, soft bounces = 3 strikes
+- **Complaint tracking:** Immediate suppression
+- **SNS webhooks:** Real-time notifications at `/api/webhooks/ses-*`
+- **Suppression list:** Marketing blocked, transactional allowed
+
+### Management Commands
+```bash
+cleanup_unverified_users --days 30    # Delete old unverified accounts
+cleanup_email_suppressions --report   # Weekly bounce/complaint cleanup
+archive_audit_logs --days 30          # Archive old audit logs to R2
+audit_badges                          # Audit badge system integrity
+award_pioneer_badges                  # Award early adopter badges
+setup_google_oauth                    # Setup Google OAuth credentials
+diagnose_db                           # Diagnose database issues
+```
+
+---
+
+## Badge System (24 badges, 7 categories)
+
+**Categories:** Exploration, Contribution, Quality, Review, Community, Tenure, Special
+
+**Key Files:**
+- `services/badge_service.py` - Checking/awarding logic
+- `models/model_badge.py` - Badge definitions
+- `models/model_user_badge.py` - User awards
+
+**Performance:**
+- Redis-cached progress (5-min TTL)
+- 96% query reduction (17 → 0.7 queries)
+- Signal-triggered awarding (no manual checks needed)
+
+**Detailed docs:** `.claude/backend/docs/badge_system/`
+
+---
+
+## Performance Optimizations
+
+### Query Optimization
+- `select_related()` for ForeignKey (UserBadge → Badge)
+- `prefetch_related()` for reverse relations
+- `annotate()` for aggregations in single query
+- Result: 99.3% query reduction on list endpoints
+
+### Caching (Redis)
+| Data | TTL | Impact |
+|------|-----|--------|
+| Location list | 15 min | 10x faster |
+| Location detail | 15 min | 4x faster |
+| Map markers | 30 min | 60x faster |
+| Badge progress | 5 min | 25x faster (cache hit) |
+
+### Async Tasks (Celery, optional)
+- Location enrichment runs in background
+- FREE tier: sync fallback (2-5s delay)
+- PAID tier: instant response ($7/month worker)
+
+---
+
+## File Structure
+
+```
+starview_app/
+├── models/
+│   ├── model_location.py           # 157 lines
+│   ├── model_review.py             # 162 lines
+│   ├── model_review_comment.py     # 102 lines
+│   ├── model_review_photo.py       # 210 lines
+│   ├── model_user_profile.py       # 87 lines
+│   ├── model_follow.py             # 58 lines
+│   ├── model_badge.py              # 87 lines
+│   ├── model_user_badge.py         # 52 lines
+│   ├── model_location_favorite.py  # 49 lines
+│   ├── model_location_visit.py     # 56 lines
+│   ├── model_vote.py               # 66 lines
+│   ├── model_report.py             # 100 lines
+│   ├── model_audit_log.py          # 132 lines
+│   └── email_events/
+│       ├── model_email_bounce.py           # 6K lines
+│       ├── model_email_complaint.py        # 5K lines
+│       └── model_email_suppressionlist.py  # 7K lines
+├── views/
+│   ├── views_auth.py          # 827 lines - auth endpoints
+│   ├── views_location.py      # 450 lines - location CRUD + check-ins
+│   ├── views_review.py        # 400 lines - review/comment CRUD
+│   ├── views_user.py          # 647 lines - profile management
+│   ├── views_badge.py         # 225 lines - badge endpoints
+│   ├── views_follow.py        # 176 lines - follow/unfollow system
+│   ├── views_favorite.py      # 71 lines - favorite locations
+│   ├── views_stats.py         # 85 lines - platform statistics
+│   ├── views_webhooks.py      # 396 lines - AWS SNS handlers
+│   └── views_health.py        # 129 lines - health check endpoint
+├── services/
+│   ├── badge_service.py       # Badge checking/awarding logic
+│   ├── location_service.py    # Mapbox enrichment
+│   ├── vote_service.py        # Generic voting logic
+│   ├── report_service.py      # Content reporting
+│   └── password_service.py    # Password validation
+├── serializers/
+│   ├── serializer_location.py # 287 lines
+│   ├── serializer_review.py   # 135 lines
+│   ├── serializer_user.py     # 148 lines
+│   ├── serializer_favorite.py
+│   ├── serializer_vote.py
+│   └── serializer_report.py
+├── utils/
+│   ├── signals.py             # 650+ lines - file cleanup, badges
+│   ├── tasks.py               # Celery tasks
+│   ├── validators.py          # Input validation
+│   ├── throttles.py           # Rate limiting
+│   ├── exception_handler.py   # DRF error handling
+│   ├── adapters.py            # django-allauth customization
+│   └── cache_keys.py          # Redis cache key management
+└── management/commands/
+    ├── cleanup_unverified_users.py
+    ├── cleanup_email_suppressions.py
+    ├── archive_audit_logs.py
+    ├── audit_badges.py
+    ├── award_pioneer_badges.py
+    ├── setup_google_oauth.py
+    └── diagnose_db.py
+```
+
+---
+
+## Configuration
+
+### Environment Variables
+```bash
+# Core
+DJANGO_SECRET_KEY=...
+DEBUG=False
+ALLOWED_HOSTS=starview.app,www.starview.app
+
+# Database (Render auto-provides DATABASE_URL)
+DATABASE_URL=postgresql://...
+
+# Redis
+REDIS_URL=redis://...
+
+# Cloudflare R2
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_STORAGE_BUCKET_NAME=starview-media
+R2_PUBLIC_URL=https://media.starview.app
+
+# AWS SES
+AWS_SES_ACCESS_KEY_ID=...
+AWS_SES_SECRET_ACCESS_KEY=...
+DEFAULT_FROM_EMAIL=noreply@starview.app
+
+# External APIs
+MAPBOX_TOKEN=...
+DISABLE_EXTERNAL_APIS=False
+
+# Optional
+CELERY_ENABLED=False  # True for async tasks
+GOOGLE_OAUTH_CLIENT_ID=...
+GOOGLE_OAUTH_CLIENT_SECRET=...
+```
+
+---
+
+## Test Suites
+
+**Location:** `.claude/backend/tests/`
+
+```bash
+# Run with Django venv
+djvenv/bin/python .claude/backend/tests/phase1/test_rate_limiting.py
+djvenv/bin/python .claude/backend/tests/phase4/test_celery_tasks.py
+djvenv/bin/python .claude/backend/tests/phase5/test_health_check.py
+```
+
+| Phase | Focus | Tests |
+|-------|-------|-------|
+| phase1 | Security (rate limiting, XSS, file upload) | 44+ |
+| phase2 | Performance (N+1, caching) | 10+ |
+| phase4 | Infrastructure (lockout, audit, Celery) | 31+ |
+| phase5 | Monitoring (health check) | 5+ |
+| phase6 | Authentication (password reset) | 5+ |
+| phase7 | Badge fixes | 10+ |
+
+---
+
+## Remaining Work
+
+1. **Database indexes** (~2-3 hours)
+   - Compound indexes on Review(location, created_at), Vote(content_type, object_id)
+
+2. **Sentry** (optional, ~1 hour)
+   - Error tracking for production
+
+---
+
+## Documentation Index
+
+| Document | Purpose |
+|----------|---------|
+| `docs/CELERY_GUIDE.md` | Async tasks setup (FREE vs PAID) |
+| `docs/STORAGE_CONFIGURATION.md` | R2/Cloudflare media storage |
+| `docs/RENDER_CRON_SETUP.md` | Production cronjob setup |
+| `docs/LOGGING_GUIDE.md` | Python logging best practices |
+| `docs/EMAIL_SECURITY_SUMMARY.md` | OAuth/registration edge cases |
+| `docs/badge_system/` | Badge system deep dive |
+| `docs/email_monitoring/` | AWS SES bounce/complaint tracking |

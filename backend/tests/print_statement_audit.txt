@@ -1,0 +1,149 @@
+PRINT STATEMENT AUDIT
+=====================
+Date: 2025-11-12
+Auditor: Claude Code
+Purpose: Identify and replace all print statements in production code with proper Python logging
+
+SEARCH PARAMETERS:
+- Directories searched: starview_app/, django_project/
+- Excluded: djvenv/, node_modules/, migrations/, __pycache__/, test files
+- Pattern: print\(
+
+FINDINGS:
+=========
+
+PRODUCTION CODE (TO BE REPLACED):
+----------------------------------
+
+FILE: django_project/settings.py
+LINE: 400
+CODE: print(f"[Storage] Using Cloudflare R2 for media files (Bucket: {AWS_STORAGE_BUCKET_NAME})")
+CONTEXT: Storage configuration startup message (R2 mode)
+SEVERITY: Low (informational logging)
+REPLACEMENT: logger.info() - INFO level
+STATUS: ✅ TO FIX
+
+FILE: django_project/settings.py
+LINE: 418
+CODE: print(f"[Storage] Using local filesystem for media files (Directory: {MEDIA_ROOT})")
+CONTEXT: Storage configuration startup message (local mode)
+SEVERITY: Low (informational logging)
+REPLACEMENT: logger.info() - INFO level
+STATUS: ✅ TO FIX
+
+FILE: django_project/celery.py
+LINE: 40
+CODE: print(f'Request: {self.request!r}')
+CONTEXT: Debug task for testing Celery setup
+SEVERITY: Very Low (debug task, optional)
+REPLACEMENT: logger.debug() - DEBUG level
+STATUS: ✅ TO FIX
+
+FILE: starview_app/models/model_review_photo.py
+LINE: 128
+CODE: print(f"Error processing review image: {e}")
+CONTEXT: Image processing error handler
+SEVERITY: Medium (error logging)
+REPLACEMENT: logger.error() - ERROR level
+STATUS: ✅ TO FIX
+
+FILE: starview_app/models/model_review_photo.py
+LINE: 150
+CODE: print(f"Error creating review thumbnail: {e}")
+CONTEXT: Thumbnail creation error handler
+SEVERITY: Medium (error logging)
+REPLACEMENT: logger.error() - ERROR level
+STATUS: ✅ TO FIX
+
+FILE: starview_app/models/model_location.py
+LINE: 100
+CODE: print(f"Enriching location {self.name} (ID: {self.pk})")
+CONTEXT: Location enrichment startup message
+SEVERITY: Low (informational logging)
+REPLACEMENT: logger.info() - INFO level
+STATUS: ✅ TO FIX
+
+FILE: starview_app/models/model_location.py
+LINE: 114
+CODE: print(f"  → Queued async enrichment task for location {self.pk}")
+CONTEXT: Celery task queue confirmation
+SEVERITY: Low (informational logging)
+REPLACEMENT: logger.info() - INFO level
+STATUS: ✅ TO FIX
+
+FILE: starview_app/models/model_location.py
+LINE: 117
+CODE: print(f"  → Running sync enrichment (Celery disabled)")
+CONTEXT: Synchronous enrichment fallback message
+SEVERITY: Low (informational logging)
+REPLACEMENT: logger.info() - INFO level
+STATUS: ✅ TO FIX
+
+FILE: starview_app/models/model_location.py
+LINE: 122
+CODE: print(f"Error saving location: {e}")
+CONTEXT: Location save error handler
+SEVERITY: High (error logging, exception re-raised)
+REPLACEMENT: logger.error() - ERROR level
+STATUS: ✅ TO FIX
+
+FILE: starview_app/utils/signals.py
+LINE: 316
+CODE: print(f"[Signal] Deleted {deleted_count} EmailConfirmation(s) for {email_address.email}")
+CONTEXT: Email confirmation cleanup after verification
+SEVERITY: Low (informational logging)
+REPLACEMENT: logger.info() - INFO level
+STATUS: ✅ TO FIX
+
+NON-PRODUCTION CODE (ACCEPTABLE, NO ACTION):
+--------------------------------------------
+
+FILE: build.sh
+LINE: 99
+CODE: print(f"Synced {synced} user(s) with EmailAddress table")
+CONTEXT: Deployment script - shell script Python snippet
+SEVERITY: N/A (one-time deployment script)
+STATUS: ✅ ACCEPTABLE (deployment script output)
+
+FILE: build.sh
+LINE: 111
+CODE: USER_EXISTS=$(python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); print(User.objects.filter(username='$DJANGO_SUPERUSER_USERNAME').exists())")
+CONTEXT: Deployment script - shell command output capture
+SEVERITY: N/A (one-time deployment script)
+STATUS: ✅ ACCEPTABLE (shell command needs stdout)
+
+SUMMARY:
+========
+Total print statements found: 12
+Production code: 10 (MUST be replaced)
+Non-production code: 2 (acceptable - deployment script)
+Migration files: 0
+Test files: 0
+
+FILES TO MODIFY:
+================
+1. django_project/settings.py (2 print statements)
+2. django_project/celery.py (1 print statement)
+3. starview_app/models/model_review_photo.py (2 print statements)
+4. starview_app/models/model_location.py (4 print statements)
+5. starview_app/utils/signals.py (1 print statement)
+
+LOGGING STRATEGY:
+=================
+- Add logger instances to each affected module: logger = logging.getLogger(__name__)
+- Use parameterized logging (% formatting, NOT f-strings)
+- Map print statements to appropriate log levels:
+  * Informational messages → logger.info()
+  * Error messages → logger.error()
+  * Debug messages → logger.debug()
+- Add structured context via extra={} where useful
+- Ensure Django LOGGING config is production-ready
+
+NEXT STEPS:
+===========
+1. ✅ Verify Django logging configuration in settings.py
+2. ✅ Add logger instances to affected files
+3. ✅ Replace print statements with appropriate logger calls
+4. ✅ Test logging output
+5. ✅ Update critical analysis report
+6. ✅ Create logging best practices guide

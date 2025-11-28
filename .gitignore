@@ -1,0 +1,4 @@
+# Starview Agent .gitignore
+settings.local.json
+.session-changes.log
+
