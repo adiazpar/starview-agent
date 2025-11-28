@@ -242,6 +242,14 @@ Django web application for stargazing location reviews:
 - Maintain separation of concerns (models, views, services, signals)
 - Keep code DRY
 
+## Git Commits
+
+**When the user asks to commit and push changes:**
+- Do NOT include Claude attribution in commit messages
+- Do NOT add "Co-Authored-By: Claude" or similar
+- Do NOT add the robot emoji or "Generated with Claude Code" footer
+- Write clean, conventional commit messages as if the user wrote them
+
 ## Backend Status
 
 **Status:** 98% Complete | **Production:** https://starview.app | **Security:** A+
