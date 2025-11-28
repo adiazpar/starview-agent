@@ -45,6 +45,41 @@ This project has an automated documentation system using Claude Code hooks. **Yo
 3. Clears the reminder log
 4. Reports what was updated
 
+### When You See a Pre-Commit Reminder
+
+**CRITICAL:** When you attempt to run `git commit` and see "PRE-COMMIT: DOCUMENTATION CHECK" in the output, you MUST pause and offer to update documentation first. Do NOT ignore this reminder.
+
+**What the reminder looks like:**
+```
+==================================================
+  PRE-COMMIT: DOCUMENTATION CHECK
+==================================================
+
+  You have uncommitted documentation updates:
+
+  - Backend files modified: X -> ARCHITECTURE.md
+  - Frontend JS/JSX modified: X -> ARCHITECTURE.md
+
+  RECOMMENDATION: Run /update-docs before committing
+==================================================
+```
+
+**Required Action:**
+
+1. **STOP** - Do not proceed with the commit immediately
+2. **INFORM** the user about the pending documentation updates
+3. **ASK** if they want to run `/update-docs` before committing
+4. **WAIT** for their response before proceeding
+
+**Example Response:**
+> Before I commit, I noticed there are pending documentation updates:
+> - 2 backend files modified → ARCHITECTURE.md needs updating
+>
+> Would you like me to run `/update-docs` first to sync the documentation, or proceed with the commit as-is?
+
+**If user says yes:** Run `/update-docs`, then proceed with the commit.
+**If user says no/skip:** Proceed with the commit without updating docs.
+
 ### Files Tracked
 
 | File Pattern | Category | Documentation |
