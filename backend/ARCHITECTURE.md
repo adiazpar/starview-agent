@@ -168,6 +168,15 @@ POST /api/webhooks/ses-complaint/  - AWS SNS spam complaints
 GET /health/                       - DB, cache, Celery status
 ```
 
+### Sitemaps (`sitemaps.py`)
+```
+GET /sitemap.xml                   - XML sitemap index for search engines
+```
+- **StaticViewSitemap:** Homepage and static pages (priority 1.0)
+- **UserProfileSitemap:** Public user profiles (priority 0.6, limit 1000)
+- Improves SEO and Google AI Overviews visibility
+- Only exposes public URLs - no sensitive data
+
 ---
 
 ## Service Layer (`starview_app/services/`)
@@ -363,6 +372,7 @@ starview_app/
 │   ├── exception_handler.py   # DRF error handling
 │   ├── adapters.py            # django-allauth customization
 │   └── cache_keys.py          # Redis cache key management
+├── sitemaps.py                    # XML sitemaps for SEO
 └── management/commands/
     ├── cleanup_unverified_users.py
     ├── cleanup_email_suppressions.py

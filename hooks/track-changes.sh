@@ -21,8 +21,14 @@ CHANGES_LOG="${CLAUDE_PROJECT_DIR}/.claude/hooks/.session-changes.log"
 NEEDS_DOC_UPDATE=false
 DOC_TYPE=""
 
-# Backend Python files
+# Backend Python files (starview_app/)
 if echo "$FILE_PATH" | grep -qE "starview_app/.*\.py$"; then
+    NEEDS_DOC_UPDATE=true
+    DOC_TYPE="backend"
+fi
+
+# Django project Python files (views.py, urls.py, settings.py)
+if echo "$FILE_PATH" | grep -qE "django_project/.*\.py$"; then
     NEEDS_DOC_UPDATE=true
     DOC_TYPE="backend"
 fi

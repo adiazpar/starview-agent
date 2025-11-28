@@ -8,7 +8,8 @@ This project has an automated documentation system using Claude Code hooks. **Yo
 
 | Event | What Happens |
 |-------|--------------|
-| **You edit files** | `track-changes.sh` logs the change automatically |
+| **You edit/create files** | `track-changes.sh` logs the change automatically |
+| **You delete files** | `track-deletions.sh` logs the deletion automatically |
 | **5 files modified** | Single gentle nudge to run `/update-docs` when task is complete |
 | **You run `git commit`** | `pre-commit-check.sh` reminds you if docs need updating |
 | **Session ends** | `doc-reminder.sh` shows pending documentation updates |
@@ -49,6 +50,7 @@ This project has an automated documentation system using Claude Code hooks. **Yo
 | File Pattern | Category | Documentation |
 |--------------|----------|---------------|
 | `starview_app/**/*.py` | `backend` | `.claude/backend/ARCHITECTURE.md` |
+| `django_project/**/*.py` | `backend` | `.claude/backend/ARCHITECTURE.md` |
 | `migrations/**/*.py` | `backend` | `.claude/backend/ARCHITECTURE.md` |
 | `starview_frontend/src/**/*.jsx/tsx/js/ts` | `frontend` | `.claude/frontend/ARCHITECTURE.md` |
 | `starview_frontend/src/styles/*.css` | `style` | `.claude/frontend/STYLE_GUIDE.md` |
@@ -57,7 +59,8 @@ This project has an automated documentation system using Claude Code hooks. **Yo
 ### Hook Configuration
 
 Hooks are defined in `.claude/settings.json` and scripts in `.claude/hooks/`:
-- `track-changes.sh` - Logs file edits
+- `track-changes.sh` - Logs file edits and creations (PostToolUse: Write|Edit)
+- `track-deletions.sh` - Logs file deletions (PreToolUse: Bash rm commands)
 - `pre-commit-check.sh` - Pre-commit documentation check
 - `session-start-reminder.sh` - Reminds at session start
 - `doc-reminder.sh` - Reminds at session end
