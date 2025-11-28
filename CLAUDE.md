@@ -250,6 +250,32 @@ Django web application for stargazing location reviews:
 - Do NOT add the robot emoji or "Generated with Claude Code" footer
 - Write clean, conventional commit messages as if the user wrote them
 
+## Submodule: .claude Directory
+
+**IMPORTANT:** The `.claude/` directory is a Git submodule (`starview-agent`), not part of the main repository.
+
+**When committing changes to files inside `.claude/`:**
+
+1. **Commit inside the submodule first:**
+   ```bash
+   git -C .claude add .
+   git -C .claude commit -m "Your commit message"
+   git -C .claude push origin main
+   ```
+
+2. **Then update the main repo's submodule reference:**
+   ```bash
+   git add .claude
+   git commit -m "Update starview-agent submodule"
+   git push
+   ```
+
+**Why this matters:**
+- Changes to `.claude/` files are tracked in the `starview-agent` repo
+- The main repo only tracks which commit of the submodule to use
+- Forgetting step 1 means your changes exist only locally
+- Forgetting step 2 means others won't see your submodule updates
+
 ## Backend Status
 
 **Status:** 98% Complete | **Production:** https://starview.app | **Security:** A+

@@ -253,7 +253,12 @@ GET /health/                       - DB, cache, Celery status
 ### Management Commands
 ```bash
 cleanup_unverified_users --days 30    # Delete old unverified accounts
-cleanup_email_suppressions --report   # Weekly bounce/complaint cleanup
+cleanup_email_suppressions            # Weekly bounce/complaint cleanup
+  --soft-bounce-days 30               #   Days before recovering soft bounces
+  --stale-days 90                     #   Days before deleting stale records
+  --dry-run                           #   Preview without making changes
+  --report                            #   Generate health report to stdout
+  --email-report user@example.com     #   Email weekly report
 archive_audit_logs --days 30          # Archive old audit logs to R2
 audit_badges                          # Audit badge system integrity
 award_pioneer_badges                  # Award early adopter badges
