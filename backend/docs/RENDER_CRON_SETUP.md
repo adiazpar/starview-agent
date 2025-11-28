@@ -56,7 +56,7 @@ Follow these steps to set up all 3 required cron jobs for Starview in production
 
 **Build Command**:
 ```bash
-./build-cron.sh
+./builds/build-cron.sh
 ```
 
 **Start Command**:
@@ -100,7 +100,7 @@ Follow same steps as Cron Job #1 (Create → Connect Repository)
 
 **Build Command**:
 ```bash
-./build-cron.sh
+./builds/build-cron.sh
 ```
 
 **Start Command**:
@@ -151,7 +151,7 @@ Follow same steps as Cron Job #1 (Create → Connect Repository)
 
 **Build Command**:
 ```bash
-./build-cron.sh
+./builds/build-cron.sh
 ```
 
 **Start Command**:
@@ -183,9 +183,9 @@ Copy ALL environment variables from your web service. See "Environment Variables
 
 ## Common Configuration Details
 
-### Build Command: `./build-cron.sh`
+### Build Command: `./builds/build-cron.sh`
 
-Uses minimal build script (only installs Python dependencies). DO NOT use `./build.sh` (that's for web service - includes React build, migrations, etc.)
+Uses minimal build script (only installs Python dependencies). DO NOT use `./builds/build.sh` (that's for web service - includes React build, migrations, etc.)
 
 ### Common Cron Schedules
 
@@ -529,7 +529,7 @@ For easy copy-paste when setting up cron jobs:
 **Cron Job #1: Cleanup Unverified Users**
 ```
 Name: starview-cleanup-unverified-users
-Build: ./build-cron.sh
+Build: ./builds/build-cron.sh
 Start: python manage.py cleanup_unverified_users --days=7
 Schedule: 0 2 * * *
 ```
@@ -537,7 +537,7 @@ Schedule: 0 2 * * *
 **Cron Job #2: Cleanup Email Suppressions**
 ```
 Name: starview-cleanup-email-suppressions
-Build: ./build-cron.sh
+Build: ./builds/build-cron.sh
 Start: python manage.py cleanup_email_suppressions --email-report YOUR-EMAIL@example.com
 Schedule: 0 3 * * 0
 ```
@@ -545,7 +545,7 @@ Schedule: 0 3 * * 0
 **Cron Job #3: Archive Audit Logs**
 ```
 Name: starview-archive-audit-logs
-Build: ./build-cron.sh
+Build: ./builds/build-cron.sh
 Start: python manage.py archive_audit_logs --days=30
 Schedule: 0 4 1 * *
 ```
@@ -553,7 +553,7 @@ Schedule: 0 4 1 * *
 **Optional: Clear Sessions**
 ```
 Name: starview-clear-sessions
-Build: ./build-cron.sh
+Build: ./builds/build-cron.sh
 Start: python manage.py clearsessions
 Schedule: 0 5 * * 0
 ```
