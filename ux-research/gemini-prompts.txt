@@ -1,0 +1,130 @@
+# Gemini Deep Research Prompts for Starview UX Research
+# Created: 2024-11-28
+# Purpose: Gather user pain points, competitive intelligence, and market positioning data
+# Usage: Copy each prompt into Gemini Deep Research and save outputs to this directory
+
+================================================================================
+PROMPT 1: USER PAIN POINTS FROM COMMUNITIES
+================================================================================
+
+Perform deep research on user pain points and frustrations related to finding stargazing and astrophotography locations. Focus on:
+
+**Primary Sources:**
+- Reddit communities: r/astrophotography, r/astronomy, r/darksky, r/telescopes, r/landscapeastrophotography, r/spaceporn
+- X/Twitter discussions about stargazing locations
+- Astronomy forums (Cloudy Nights, Stargazers Lounge)
+- App store reviews for astronomy apps
+
+**Research Questions:**
+1. What are the most common complaints when people try to find dark sky locations?
+2. What do astrophotographers wish they knew BEFORE driving to a spot?
+3. What information do users say is missing from existing apps/tools?
+4. What unexpected problems do people encounter at stargazing sites (safety, access, terrain, crowds)?
+5. How do beginners differ from experienced stargazers in their needs?
+
+**Output Format:**
+- Categorize pain points by theme (discovery, planning, on-site, social)
+- Include direct quotes where possible
+- Rate frequency (how often each pain point appears)
+- Note any feature requests users explicitly mention
+
+
+================================================================================
+PROMPT 2: COMPETITIVE LANDSCAPE ANALYSIS
+================================================================================
+
+Perform comprehensive competitive analysis of apps and websites in the stargazing/dark sky location space.
+
+**Research Scope:**
+- Mobile apps (iOS/Android) for finding stargazing spots
+- Websites with dark sky maps or location databases
+- Astrophotography planning tools
+- Light pollution mapping tools
+- Weather/clear sky forecast apps used by astronomers
+
+**For Each Competitor, Analyze:**
+1. Core value proposition - what problem do they solve?
+2. Key features and functionality
+3. Pricing model (free, freemium, subscription)
+4. User reviews - what do people love/hate?
+5. Target audience (beginners vs serious astronomers)
+6. Content model (user-generated vs curated vs automated)
+7. Mobile experience quality
+8. Community features (if any)
+
+**Key Competitors to Include:**
+- Dark Site Finder
+- Light Pollution Map (lightpollutionmap.info)
+- Clear Outside / Clear Dark Sky
+- Stellarium
+- PhotoPills (astronomy features)
+- SkySafari
+- Star Walk
+- Any location-based stargazing review platforms
+
+**Output Format:**
+- Competitive matrix comparing features
+- Gap analysis - what's missing in the market?
+- Positioning opportunities for a new entrant
+
+
+================================================================================
+PROMPT 3: MARKET POSITIONING & DIFFERENTIATION
+================================================================================
+
+Research the stargazing and astrotourism market to identify positioning opportunities for a web app focused on user-reviewed stargazing locations.
+
+**Research Areas:**
+
+1. **Astrotourism Trends**
+   - Growth of dark sky tourism
+   - Demographics of stargazers (age, location, experience level)
+   - Seasonal patterns and popular destinations
+   - Connection to camping, hiking, and outdoor recreation
+
+2. **Underserved Segments**
+   - Who is NOT being served well by existing tools?
+   - What use cases are poorly addressed?
+   - Geographic gaps (which regions lack good resources?)
+
+3. **Emerging Needs**
+   - Impact of Starlink/satellite visibility concerns
+   - Growing interest in astrophotography among beginners
+   - Light pollution awareness movements
+   - Dark sky preservation advocacy
+
+4. **Successful Patterns from Adjacent Spaces**
+   - What made AllTrails successful for hiking?
+   - How does iNaturalist build community around observations?
+   - What can be learned from Yelp/TripAdvisor for reviews?
+
+**Output:**
+- 3-5 potential positioning statements for a stargazing location app
+- Unique value propositions that differentiate from competitors
+- Target audience personas with specific needs
+
+
+================================================================================
+NOTES FOR FUTURE REFINEMENT
+================================================================================
+
+These prompts can be refined based on:
+- Specific geographic focus (US-only, international, specific regions)
+- Target audience narrowing (beginners only, astrophotographers only)
+- Feature-specific research (e.g., deep dive on weather integration needs)
+- Temporal focus (recent discussions only, historical trends)
+
+When Starview evolves, consider adding prompts for:
+- Feature validation (testing specific feature ideas with community sentiment)
+- Pricing research (what are users willing to pay for?)
+- Accessibility research (how do users with different needs engage?)
+- Mobile vs desktop usage patterns
+
+================================================================================
+OUTPUT FILE NAMING CONVENTION
+================================================================================
+
+Save Gemini outputs to this directory with the following names:
+- gemini-output-pain-points-YYYY-MM-DD.md
+- gemini-output-competitors-YYYY-MM-DD.md
+- gemini-output-positioning-YYYY-MM-DD.md

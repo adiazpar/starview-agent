@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2025-11-27 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2025-11-28 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -232,6 +232,7 @@ GET /sitemap.xml                   - XML sitemap index for search engines
 - **Account lockout:** 5 failed attempts = 1 hour (django-axes)
 - **Password reset:** Secure tokens, 1-hour expiry
 - **Google OAuth:** Social login support
+- **React SPA integration:** Custom adapters redirect allauth HTML pages to React frontend
 
 ### Input Validation (`utils/validators.py`)
 - File upload: 5MB max, extension whitelist, MIME check, Pillow verification
@@ -243,6 +244,38 @@ GET /sitemap.xml                   - XML sitemap index for search engines
 - CSP with Mapbox/R2 allowlist
 - X-Frame-Options: DENY
 - X-Content-Type-Options: nosniff
+
+---
+
+## Allauth React Integration (`utils/adapters.py`)
+
+Custom adapters and views that redirect django-allauth HTML pages to React frontend routes.
+
+### Redirect Views (in `django_project/urls.py`)
+| Allauth URL | Redirect To | Purpose |
+|-------------|-------------|---------|
+| `/accounts/login/` | `/login` | Login page |
+| `/accounts/signup/` | `/register` | Registration page |
+| `/accounts/logout/` | `/` | Logout (with session clear) |
+| `/accounts/email/` | `/profile` | Email management |
+| `/accounts/password/change/` | `/profile` | Password change |
+| `/accounts/password/reset/` | `/password-reset` | Password reset request |
+| `/accounts/confirm-email/<key>/` | `/email-verified` | Email confirmation |
+| `/accounts/3rdparty/` | `/profile` | Social account connections |
+
+### Custom Adapters
+| Adapter | Purpose |
+|---------|---------|
+| `CustomAccountAdapter` | Email verification, login/logout/signup redirects to React |
+| `CustomSocialAccountAdapter` | OAuth username generation (user######), email conflict prevention |
+| `CustomConfirmEmailView` | Handles email verification + change, sends welcome emails |
+| `CustomConnectionsView` | Social account connect/disconnect from profile |
+
+### Key Features
+- **Welcome emails:** Sent on first verification (email signup) or OAuth signup
+- **Email change:** New email replaces old, old addresses cleaned up
+- **OAuth conflicts:** Prevents duplicate email registration, shows helpful errors
+- **Dev/prod aware:** Uses `localhost:5173` in DEBUG, relative URLs in production
 
 ---
 
@@ -370,7 +403,7 @@ starview_app/
 │   ├── validators.py          # Input validation
 │   ├── throttles.py           # Rate limiting
 │   ├── exception_handler.py   # DRF error handling
-│   ├── adapters.py            # django-allauth customization
+│   ├── adapters.py            # django-allauth customization (React redirects, OAuth adapters)
 │   └── cache_keys.py          # Redis cache key management
 ├── sitemaps.py                    # XML sitemaps for SEO
 └── management/commands/

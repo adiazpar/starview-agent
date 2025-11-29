@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "deep-research": {
+      "command": "npx",
+      "args": ["-y", "deep-research-mcp-server"],
+      "env": {
+        "GOOGLE_API_KEY": "${GOOGLE_API_KEY}",
+        "GEMINI_MODEL": "${GEMINI_MODEL}"
+      }
+    },
     "puppeteer": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
