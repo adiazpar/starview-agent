@@ -40,8 +40,26 @@ Pause and ask the user if they want to run `/update-docs` before proceeding.
 |-------|-------------|
 | `starview-badge-creator` | Adding new badges to the badge system |
 | `starview-api-endpoint` | Full-stack API: DRF backend + frontend services + React Query |
+| `starview-product-lab` | Feature ideation, product validation, competitive analysis, identity refinement |
 
-**Auto-invoke:** When user mentions "create a badge", "new badge", "add a badge" → Enter plan mode, then run `/create-badge`
+**Auto-invoke triggers:**
+- "create a badge", "new badge", "add a badge" → Enter plan mode, then run `/create-badge`
+- "brainstorm features", "what should we build", "product direction" → Use `starview-product-lab` skill
+
+## UX Research (`.claude/ux-research/`)
+
+Gemini Deep Research reports for product decisions. **Dynamic discovery** - new files are automatically detected.
+
+| File Pattern | Contains |
+|--------------|----------|
+| `gemini-output-pain-points-*.md` | User frustrations from Reddit, forums, app reviews |
+| `gemini-output-positioning-*.md` | Market sizing, personas, positioning strategies |
+| `gemini-output-competitors-*.md` | Competitive landscape analysis |
+| `gemini-output-{new-topic}-*.md` | Future research (auto-discovered) |
+
+**How it works:** The `starview-product-lab` skill spawns Haiku subagents to read source files on-demand. No cached summaries - always fresh from source.
+
+**Adding research:** Save new Gemini output as `gemini-output-{topic}-YYYY-MM-DD.md` and it's automatically available.
 
 ## Building New Features
 
