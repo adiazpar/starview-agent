@@ -1,6 +1,6 @@
 # Starview API Integration Guide
 
-**Last Updated:** 2025-11-27
+**Last Updated:** 2025-12-25
 **API Version:** 1.0
 **Base URL:** `/api` (uses relative URLs via Axios configuration)
 **Production:** `https://starview.app` | **Development:** `http://127.0.0.1:8000`
@@ -807,6 +807,34 @@ Unmark a location as visited (remove check-in).
 ```
 
 **Frontend Service:** `locationsApi.unmarkVisited(locationId)`
+
+---
+
+#### `POST /api/locations/{id}/toggle_favorite/`
+Toggle favorite status for a location (add or remove from favorites).
+
+**Authentication:** Required
+
+**Success Response - Added (201):**
+```json
+{
+  "is_favorited": true
+}
+```
+
+**Success Response - Removed (200):**
+```json
+{
+  "is_favorited": false
+}
+```
+
+**Frontend Service:** `locationsApi.toggleFavorite(locationId)`
+
+**Notes:**
+- If not favorited, creates a FavoriteLocation record
+- If already favorited, removes the FavoriteLocation record
+- Invalidates user's location cache to update `is_favorited` field on refresh
 
 ---
 
@@ -2461,7 +2489,7 @@ For bugs, feature requests, or questions:
 
 ---
 
-**Last Updated:** 2025-11-27
+**Last Updated:** 2025-12-25
 **API Version:** 1.0
 **Production URL:** https://starview.app
 

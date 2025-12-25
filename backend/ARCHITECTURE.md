@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2025-11-28 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2025-12-25 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -83,6 +83,7 @@ GET    /api/locations/map_markers/          - Lightweight map data (97% smaller)
 GET    /api/locations/{id}/info_panel/      - Map popup data
 POST   /api/locations/{id}/mark-visited/    - Check-in to location (creates LocationVisit)
 DELETE /api/locations/{id}/unmark-visited/  - Remove check-in
+POST   /api/locations/{id}/toggle_favorite/ - Toggle favorite status (add/remove)
 POST   /api/locations/{id}/report/          - Report location
 ```
 

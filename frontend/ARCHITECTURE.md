@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2025-11-27
+**Last Updated:** 2025-12-25
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -52,6 +52,9 @@ starview_frontend/src/
 │   │       ├── ProfilePictureForm/
 │   │       ├── BioForm/
 │   │       └── LocationForm/
+│   ├── explore/                   # Explore page components
+│   │   ├── LocationCard/          # Location card with rating, distance, favorite
+│   │   └── ViewToggle/            # List/map view toggle button
 │   ├── navbar/
 │   │   ├── index.jsx
 │   │   └── styles.css
@@ -71,6 +74,7 @@ starview_frontend/src/
 │   ├── Register/
 │   ├── Profile/
 │   ├── PublicProfile/
+│   ├── Explore/                   # Location discovery with list/map views
 │   ├── VerifyEmail/
 │   ├── EmailVerified/
 │   ├── EmailConfirmError/
@@ -84,7 +88,10 @@ starview_frontend/src/
 │   ├── useFormSubmit.js
 │   ├── usePasswordValidation.js
 │   ├── useProfileData.js          # React Query hook for profile data
-│   └── useStats.js                # React Query hook for platform stats
+│   ├── useStats.js                # React Query hook for platform stats
+│   ├── useLocations.js            # React Query hook with infinite scroll for locations
+│   ├── useIntersectionObserver.js # Viewport detection for infinite scroll
+│   └── useUserLocation.js         # Browser geolocation with IP fallback
 ├── services/                      # Flat - no folders
 │   ├── api.js
 │   ├── auth.js
@@ -94,7 +101,8 @@ starview_frontend/src/
 ├── context/
 │   └── AuthContext.jsx
 ├── utils/
-│   └── badges.js
+│   ├── badges.js
+│   └── geo.js                     # Distance calculation, formatting (Haversine)
 ├── styles/
 │   └── global.css                 # All design tokens, reset, and shared styles
 ├── App.jsx                        # Routes only
@@ -201,6 +209,9 @@ Re-render
 | `usePinnedBadges.js` | Pinned badges state management |
 | `useProfileData.js` | React Query hook for profile data (badges, social accounts) |
 | `useStats.js` | React Query hook for platform statistics |
+| `useLocations.js` | React Query hooks: `useLocations` (infinite scroll), `useLocation` (single), `useToggleFavorite` |
+| `useIntersectionObserver.js` | Viewport detection for infinite scroll triggers |
+| `useUserLocation.js` | Browser geolocation with IP fallback, 30-min cache |
 
 ### Shared Components
 
@@ -223,6 +234,7 @@ Re-render
 | `/register` | Register | No | GuestRoute |
 | `/profile` | Profile | **Yes** | ProtectedRoute |
 | `/users/:username` | PublicProfile | No | - |
+| `/explore` | Explore | No | - |
 | `/verify-email` | VerifyEmail | No | - |
 | `/email-verified` | EmailVerified | No | - |
 | `/email-confirm-error` | EmailConfirmError | No | - |
@@ -242,6 +254,7 @@ Re-render
 ```javascript
 import authApi from '../services/auth';
 import { profileApi, publicUserApi } from '../services/profile';
+import { locationsApi } from '../services/locations';
 import statsApi from '../services/stats';
 
 // Auth
@@ -249,6 +262,14 @@ await authApi.login({ email, password });
 await authApi.logout();
 await authApi.register(userData);
 await authApi.checkStatus(); // Returns { authenticated: boolean, user: {...} }
+
+// Locations
+await locationsApi.getAll(params);    // Paginated list
+await locationsApi.getById(id);       // Single location
+await locationsApi.getMapMarkers();   // Lightweight markers for map
+await locationsApi.markVisited(id);   // Check-in to location
+await locationsApi.unmarkVisited(id); // Remove check-in
+await locationsApi.toggleFavorite(id); // Toggle favorite (add/remove)
 
 // Profile (authenticated user)
 await profileApi.getMe();
@@ -352,6 +373,9 @@ const queryClient = new QueryClient({
 **Query Hooks:**
 - `useProfileData()` - Badge collection + social accounts (parallel fetching)
 - `usePlatformStats()` - Platform statistics with threshold logic
+- `useLocations()` - Infinite scroll locations with pagination
+- `useLocation(id)` - Single location fetch
+- `useToggleFavorite()` - Mutation with optimistic cache updates
 
 **Benefits:**
 - Automatic caching and deduplication
