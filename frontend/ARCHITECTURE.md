@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2025-12-25
+**Last Updated:** 2025-12-25 (Sprint 09)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -19,6 +19,9 @@ starview_frontend/src/
 │   │   │   ├── index.jsx
 │   │   │   └── styles.css
 │   │   ├── ErrorBoundary/
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   ├── ImageCarousel/         # Swipe/arrow image carousel (1-5 images)
 │   │   │   ├── index.jsx
 │   │   │   └── styles.css
 │   │   ├── LocationAutocomplete/  # Mapbox autocomplete
@@ -53,7 +56,9 @@ starview_frontend/src/
 │   │       ├── BioForm/
 │   │       └── LocationForm/
 │   ├── explore/                   # Explore page components
+│   │   ├── ExploreMap/            # Mapbox map with markers and bottom card
 │   │   ├── LocationCard/          # Location card with rating, distance, favorite
+│   │   ├── Pagination/            # Desktop page navigation controls
 │   │   └── ViewToggle/            # List/map view toggle button
 │   ├── navbar/
 │   │   ├── index.jsx
@@ -89,9 +94,12 @@ starview_frontend/src/
 │   ├── usePasswordValidation.js
 │   ├── useProfileData.js          # React Query hook for profile data
 │   ├── useStats.js                # React Query hook for platform stats
-│   ├── useLocations.js            # React Query hook with infinite scroll for locations
+│   ├── useLocations.js            # React Query hooks: useLocations (infinite), useLocationsPaginated, useToggleFavorite
+│   ├── useMapMarkers.js           # React Query hook for lightweight map marker data
 │   ├── useIntersectionObserver.js # Viewport detection for infinite scroll
-│   └── useUserLocation.js         # Browser geolocation with IP fallback
+│   ├── useUserLocation.js         # Browser geolocation with profile location fallback
+│   ├── useMediaQuery.js           # CSS media query detection (useIsDesktop helper)
+│   └── useRequireAuth.js          # Auth guard - redirects to login with return URL
 ├── services/                      # Flat - no folders
 │   ├── api.js
 │   ├── auth.js
@@ -209,9 +217,12 @@ Re-render
 | `usePinnedBadges.js` | Pinned badges state management |
 | `useProfileData.js` | React Query hook for profile data (badges, social accounts) |
 | `useStats.js` | React Query hook for platform statistics |
-| `useLocations.js` | React Query hooks: `useLocations` (infinite scroll), `useLocation` (single), `useToggleFavorite` |
+| `useLocations.js` | React Query hooks: `useLocations` (infinite), `useLocationsPaginated` (desktop), `useToggleFavorite` |
+| `useMapMarkers.js` | React Query hook for lightweight map marker data (30-min stale time) |
 | `useIntersectionObserver.js` | Viewport detection for infinite scroll triggers |
-| `useUserLocation.js` | Browser geolocation with IP fallback, 30-min cache |
+| `useUserLocation.js` | Browser geolocation with profile location fallback, 30-min cache |
+| `useMediaQuery.js` | CSS media query subscription; `useIsDesktop()` returns true at 1024px+ |
+| `useRequireAuth.js` | Auth guard for actions - redirects to login with return URL |
 
 ### Shared Components
 
@@ -220,6 +231,7 @@ Re-render
 | `Alert` | Success/error/warning/info alerts with icons |
 | `LoadingSpinner` | Reusable loading indicator (multiple sizes) |
 | `ErrorBoundary` | App-wide error catching |
+| `ImageCarousel` | Swipe (mobile) + arrow (desktop) image carousel with auto-play |
 | `LocationAutocomplete` | Mapbox location search autocomplete |
 | `ProfilePictureModal` | Modal for profile picture preview/zoom |
 
@@ -373,9 +385,10 @@ const queryClient = new QueryClient({
 **Query Hooks:**
 - `useProfileData()` - Badge collection + social accounts (parallel fetching)
 - `usePlatformStats()` - Platform statistics with threshold logic
-- `useLocations()` - Infinite scroll locations with pagination
-- `useLocation(id)` - Single location fetch
-- `useToggleFavorite()` - Mutation with optimistic cache updates
+- `useLocations()` - Infinite scroll locations for mobile
+- `useLocationsPaginated()` - Paginated locations for desktop
+- `useMapMarkers()` - Lightweight map markers (30-min stale time)
+- `useToggleFavorite()` - Mutation with optimistic cache updates (syncs infinite, paginated, and mapMarkers caches)
 
 **Benefits:**
 - Automatic caching and deduplication

@@ -28,12 +28,13 @@
 
 ---
 
-## Database Models (16 total)
+## Database Models (17 total)
 
 ### Core Models (`starview_app/models/`)
 | Model | File | Purpose |
 |-------|------|---------|
 | Location | `model_location.py` | Stargazing sites with auto-enrichment from Mapbox |
+| LocationPhoto | `model_location_photo.py` | Creator-uploaded photos (max 5/location, auto-resized 1920x1920 + 300x300 thumbnails) |
 | Review | `model_review.py` | User ratings (1-5 stars), unique per user/location |
 | ReviewComment | `model_review_comment.py` | Threaded comments on reviews |
 | ReviewPhoto | `model_review_photo.py` | Max 5/review, auto-resized to 1920x1920 |
@@ -196,7 +197,8 @@ GET /sitemap.xml                   - XML sitemap index for search engines
 
 **File Cleanup (pre_delete):**
 - `delete_user_profile_picture` - Cleanup profile pics
-- `delete_review_photo_files` - Cleanup images + thumbnails
+- `delete_review_photo_files` - Cleanup review images + thumbnails
+- `delete_location_photo_files` - Cleanup location photos + thumbnails
 - `cleanup_location_directory_structure` - Cleanup on Location CASCADE
 - `cleanup_review_directory_structure` - Cleanup on Review CASCADE
 
@@ -358,6 +360,7 @@ diagnose_db                           # Diagnose database issues
 starview_app/
 ├── models/
 │   ├── model_location.py           # 157 lines
+│   ├── model_location_photo.py     # 169 lines - Creator-uploaded location photos
 │   ├── model_review.py             # 162 lines
 │   ├── model_review_comment.py     # 102 lines
 │   ├── model_review_photo.py       # 210 lines
