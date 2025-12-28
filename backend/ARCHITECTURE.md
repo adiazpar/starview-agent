@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2025-12-25 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2025-12-28 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -80,7 +80,7 @@ POST   /api/locations/                      - Create (auth required)
 GET    /api/locations/{id}/                 - Detail
 PUT    /api/locations/{id}/                 - Update (auth required)
 DELETE /api/locations/{id}/                 - Delete (auth required)
-GET    /api/locations/map_markers/          - Lightweight map data (97% smaller)
+GET    /api/locations/map_geojson/          - GeoJSON FeatureCollection for Mapbox (version-cached)
 GET    /api/locations/{id}/info_panel/      - Map popup data
 POST   /api/locations/{id}/mark-visited/    - Check-in to location (creates LocationVisit)
 DELETE /api/locations/{id}/unmark-visited/  - Remove check-in
@@ -344,7 +344,7 @@ diagnose_db                           # Diagnose database issues
 |------|-----|--------|
 | Location list | 15 min | 10x faster |
 | Location detail | 15 min | 4x faster |
-| Map markers | 30 min | 60x faster |
+| Map GeoJSON | 30 min | 60x faster (version-based O(1) invalidation) |
 | Badge progress | 5 min | 25x faster (cache hit) |
 
 ### Async Tasks (Celery, optional)

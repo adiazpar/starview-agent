@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2025-12-25 (Sprint 09)
+**Last Updated:** 2025-12-28 (Sprint 09)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -218,7 +218,7 @@ Re-render
 | `useProfileData.js` | React Query hook for profile data (badges, social accounts) |
 | `useStats.js` | React Query hook for platform statistics |
 | `useLocations.js` | React Query hooks: `useLocations` (infinite), `useLocationsPaginated` (desktop), `useToggleFavorite` |
-| `useMapMarkers.js` | React Query hook for lightweight map marker data (30-min stale time) |
+| `useMapMarkers.js` | React Query hook for map GeoJSON; returns `{ geojson, markers, markerMap }` (30-min stale time) |
 | `useIntersectionObserver.js` | Viewport detection for infinite scroll triggers |
 | `useUserLocation.js` | Browser geolocation with profile location fallback, 30-min cache |
 | `useMediaQuery.js` | CSS media query subscription; `useIsDesktop()` returns true at 1024px+ |
@@ -278,7 +278,7 @@ await authApi.checkStatus(); // Returns { authenticated: boolean, user: {...} }
 // Locations
 await locationsApi.getAll(params);    // Paginated list
 await locationsApi.getById(id);       // Single location
-await locationsApi.getMapMarkers();   // Lightweight markers for map
+await locationsApi.getMapGeoJSON();   // GeoJSON FeatureCollection for Mapbox
 await locationsApi.markVisited(id);   // Check-in to location
 await locationsApi.unmarkVisited(id); // Remove check-in
 await locationsApi.toggleFavorite(id); // Toggle favorite (add/remove)
@@ -387,8 +387,8 @@ const queryClient = new QueryClient({
 - `usePlatformStats()` - Platform statistics with threshold logic
 - `useLocations()` - Infinite scroll locations for mobile
 - `useLocationsPaginated()` - Paginated locations for desktop
-- `useMapMarkers()` - Lightweight map markers (30-min stale time)
-- `useToggleFavorite()` - Mutation with optimistic cache updates (syncs infinite, paginated, and mapMarkers caches)
+- `useMapMarkers()` - Map GeoJSON with `markerMap` for O(1) lookups (30-min stale time)
+- `useToggleFavorite()` - Mutation with optimistic cache updates (syncs infinite, paginated, and mapGeoJSON caches)
 
 **Benefits:**
 - Automatic caching and deduplication
