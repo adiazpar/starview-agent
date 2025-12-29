@@ -1,6 +1,6 @@
 # Seed Observatories
 
-Automated pipeline for seeding observatory locations from Wikidata with AI-validated images.
+Orchestrated pipeline for seeding observatory locations from Wikidata with AI-validated images.
 
 ## When to Use
 
@@ -15,172 +15,277 @@ Trigger phrases: "seed observatories", "add observatories", "run observatory see
 
 Parse from user input:
 - `--limit N` or just a number: How many observatories to discover (default: 10)
-- `--offset N`: Skip first N observatories (for pagination to get different results)
+- `--offset N`: Skip first N observatories (for pagination)
 - `--min-elevation N`: Filter by minimum elevation in meters
 - `--country "Name"`: Filter by country name
+- `--resume`: Resume from checkpoint files (skip discovery, continue validation)
 
-## Recommended Limits
+## Batch Limits
 
-| Limit | Use Case | Session Time |
-|-------|----------|--------------|
-| 5-10 | Testing | ~5 min |
-| **20** | **Recommended max per session** | ~15-20 min |
-
-**Maximum batch size: 20 observatories per session**
-
-Due to Claude API limits on multi-image requests (max 2000px per image when many images in context), larger batches can cause session crashes. Use pagination across fresh sessions:
-
-```
-Session 1: /seed-observatories --limit 20              # Gets #1-20
-Session 2: /seed-observatories --limit 20 --offset 20  # Gets #21-40  (NEW SESSION)
-Session 3: /seed-observatories --limit 20 --offset 40  # Gets #41-60  (NEW SESSION)
-```
-
-**IMPORTANT:** Start a **fresh Claude session** for each batch to avoid accumulating images in context.
+| Limit | Approach | Context Impact |
+|-------|----------|----------------|
+| 1-15 | Direct validation | Manager handles directly |
+| 16-50 | **Orchestrated** | Sub-agents handle batches |
+| 51+ | Multi-session | Split across sessions |
 
 **Max available**: ~3,484 observatories in Wikidata
 
-## Chrome-Based Validation (Key Innovation)
+## Architecture: Manager + Sub-Agents
 
-This skill uses **Chrome DevTools MCP** to validate images BEFORE downloading. This eliminates unnecessary downloads:
+```
+┌─────────────────────────────────────────────────────────────┐
+│  MANAGER (main session)                                     │
+│  - Runs discovery                                           │
+│  - Spawns validation sub-agents (sequentially)              │
+│  - Reads checkpoint files from sub-agents                   │
+│  - Merges checkpoints → validated_observatories.json        │
+│  - Runs seed command                                        │
+│                                                             │
+│  ⚡ Manager NEVER sees images - only JSON text              │
+└─────────────────────────────────────────────────────────────┘
+         │
+         ├──► Sub-Agent 1 → writes temp/batch_001.json
+         ├──► Sub-Agent 2 → writes temp/batch_002.json
+         └──► Sub-Agent 3 → writes temp/batch_003.json
+```
 
-**How it works:**
-1. Wikidata provides image URLs in discovery metadata
-2. Chrome navigates directly to the image URL
-3. Screenshot is taken and validated with Claude's vision
-4. Only ACCEPTED image URLs are stored in JSON
-5. Seeding downloads directly from validated URLs
+**Key benefits:**
+- Images stay in sub-agent contexts, manager stays lightweight
+- Checkpoint files survive session crashes
+- Can resume from last successful batch
 
-**Benefits:**
-- **ZERO downloads during validation** - Chrome just views the URL
-- **Only download accepted images** - during seeding only
-- **Single download per image** - no temp files needed
-- **Dramatically reduced Wikimedia API usage**
+## File Locations
+
+| File | Purpose |
+|------|---------|
+| `seed_data/temp/discovered.json` | All discovered observatories (from Wikidata) |
+| `seed_data/temp/batch_NNN.json` | Checkpoint: validated results from sub-agent N |
+| `seed_data/validated_observatories.json` | Final output (cumulative, commit to repo) |
 
 ## Execution Steps
 
 **IMPORTANT: Execute these steps automatically. Do not just display instructions.**
 
-### Step 1: Discovery + Dedupe
+---
 
-Run discovery to get observatory metadata from Wikidata, then automatically dedupe against database:
+### Step 1: Check for Resume
 
-```bash
-djvenv/bin/python -m tools.observatory_seeder.run --discover --limit <N>
+First, check if there are existing checkpoint files (previous crashed session):
+
+```python
+import glob
+existing_batches = sorted(glob.glob('seed_data/temp/batch_*.json'))
+if existing_batches:
+    print(f"Found {len(existing_batches)} checkpoint files from previous run")
+    # Ask user: resume or start fresh?
 ```
 
-Add options if user specified:
-- `--offset <N>` to skip first N observatories (for pagination)
-- `--min-elevation <M>` if elevation filter requested
-- `--country "<name>"` if country filter requested
+If resuming, skip to Step 3b and continue from the next batch number.
+
+If starting fresh, clear old checkpoints:
+```bash
+rm -f seed_data/temp/batch_*.json
+```
+
+---
+
+### Step 2: Discovery + Dedupe
+
+Run discovery to get observatory metadata from Wikidata:
+
+```bash
+djvenv/bin/python -m tools.observatory_seeder.run --discover --limit <N> --offset <M>
+```
 
 This:
 1. Queries Wikidata for observatory metadata (including image_url)
-2. **Automatically dedupes** against existing database locations
-3. Saves only NEW observatories to `discovered.json`
+2. **Dedupes against database** (removes observatories that already exist)
+3. Saves NEW observatories to `seed_data/temp/discovered.json`
 
-If all discovered observatories already exist, the pipeline exits early.
+If all discovered observatories already exist, exit early.
 
-### Step 2: Chrome-Based Image Validation (NO DOWNLOAD)
+---
 
-Validate images using Chrome DevTools MCP WITHOUT downloading. Chrome navigates directly to the image URL.
+### Step 3: Validation
 
-**IMPORTANT - Viewport Size Failsafe:**
-Before starting validation, resize the browser to ensure screenshots stay under Claude's 2000px limit:
-```
-mcp__chrome-devtools__resize_page(width=1600, height=900)
-```
-
-For each observatory in `discovered.json` with an `image_url`:
-
-1. **Navigate to image URL:**
-   ```
-   mcp__chrome-devtools__navigate_page(url="{image_url}")
-   ```
-
-2. **Take screenshot:**
-   ```
-   mcp__chrome-devtools__take_screenshot()
-   ```
-
-3. **Read and validate with vision** - Classify using these criteria:
-
-   **ACCEPT** if image shows:
-   - Observatory buildings, domes, or telescope structures
-   - Radio telescope dishes or antenna arrays
-   - Control buildings with astronomical equipment
-   - Observatory grounds from outside
-
-   **REJECT** if image shows:
-   - Astronomical objects (nebulae, galaxies, star fields)
-   - Landscapes without visible structures
-   - Diagrams or illustrations
-   - Blurry or low-quality images
-
-4. **Record result:** `{slug, image_url, accepted: true/false, notes: reason}`
-
-**For efficiency:** Process sequentially - open page, screenshot, validate, close is not needed (browser handles tabs). Just open new pages for each image.
-
-### Step 3: Search Fallback URLs for Rejected
-
-For each REJECTED observatory, search Wikimedia Commons for alternative image URLs:
+Read discovered.json and count observatories:
 
 ```python
-from tools.observatory_seeder import search_wikimedia_commons
-results = search_wikimedia_commons("{observatory_name}", limit=5)
-# Returns list of {title, url} for potential images
+import json
+with open('seed_data/temp/discovered.json') as f:
+    observatories = json.load(f)['observatories']
+count = len(observatories)
 ```
 
-### Step 4: Chrome-Validate Fallback URLs
+**Decision:**
+- If `count <= 15`: Use Step 3a (direct validation)
+- If `count > 15`: Use Step 3b (orchestrated sub-agents)
 
-For each rejected observatory with fallback URLs:
-1. Navigate to each fallback URL
-2. Screenshot and validate with vision
-3. If any ACCEPTED, record that URL
-4. If all rejected, mark observatory as "no valid image"
+---
 
-### Step 5: Merge into Validated JSON
+### Step 3a: Direct Validation (small batches ≤15)
 
-**IMPORTANT:** Use merge, not overwrite. The JSON file accumulates over multiple runs.
+Manager validates directly using Chrome:
+
+1. Navigate to each image_url
+2. Take screenshot and validate with vision
+3. ACCEPT/REJECT based on criteria (see Validation Criteria below)
+4. For rejects, search Wikimedia Commons for fallback URLs
+5. Write results to `seed_data/temp/batch_001.json`
+6. Proceed to Step 4
+
+---
+
+### Step 3b: Orchestrated Validation (large batches >15)
+
+Split observatories into batches of 10-15 each. Spawn sub-agents **sequentially**.
+
+**For each batch:**
 
 ```python
+batch_num = 1  # increment for each batch
+batch_data = observatories[start:end]  # slice for this batch
+```
+
+**Sub-agent prompt:**
+
+```
+You are an OBSERVATORY IMAGE VALIDATION AGENT.
+
+## YOUR TASK
+Validate observatory images and write results to a checkpoint file.
+
+## INPUT - Observatory batch:
+{batch_json}
+
+Note: Input contains only essential fields (slug, name, latitude, longitude, image_url).
+Country and elevation are NOT included - Mapbox provides these during seeding.
+
+## VALIDATION PROCESS
+For each observatory:
+1. Navigate Chrome to the image_url
+2. Take screenshot (DO NOT save screenshot to file)
+3. Validate using vision:
+   - ACCEPT: Observatory buildings, domes, telescopes, radio dishes, facility grounds
+   - REJECT: Astronomical objects only (nebulae, galaxies, star fields), landscapes without structures, diagrams
+
+4. For REJECTED images, search Wikimedia Commons for alternatives:
+   ```python
+   from tools.observatory_seeder import search_wikimedia_commons
+   results = search_wikimedia_commons("{observatory_name}", limit=5)
+   ```
+   Validate each fallback URL until one is ACCEPTED.
+
+## OUTPUT
+Write results to checkpoint file: seed_data/temp/batch_{batch_num:03d}.json
+
+**CRITICAL: Copy all metadata fields EXACTLY as provided. Do NOT modify slug, name, latitude, or longitude. Only set accepted, final_url, used_fallback, and notes.**
+
+```python
+import json
+results = {
+    "batch_num": {batch_num},
+    "results": [
+        {
+            # COPY THESE EXACTLY FROM INPUT - DO NOT MODIFY:
+            "slug": "observatory-slug",
+            "name": "Observatory Name",
+            "latitude": 12.345,
+            "longitude": -67.890,
+            "original_url": "http://...",
+
+            # THESE ARE YOUR VALIDATION RESULTS:
+            "final_url": "http://...",  # original if accepted, fallback if found, null if none
+            "accepted": True,
+            "used_fallback": False,
+            "notes": "Shows observatory dome on mountain"
+        }
+    ],
+    "stats": {
+        "total": N,
+        "accepted": N,
+        "rejected": N,
+        "fallback_found": N,
+        "no_valid_image": N
+    }
+}
+with open('seed_data/temp/batch_{batch_num:03d}.json', 'w') as f:
+    json.dump(results, f, indent=2)
+```
+
+After writing the file, output: "Checkpoint saved: batch_{batch_num:03d}.json"
+
+CRITICAL RULES:
+- DO NOT save screenshots to disk
+- DO NOT modify metadata (slug, name, latitude, longitude) - copy exactly
+- ONLY determine: accepted (true/false), final_url, and notes
+```
+
+**After each sub-agent completes:**
+- Verify checkpoint file was created
+- Log progress: "Batch X/Y complete"
+- Continue to next batch
+
+---
+
+### Step 4: Consolidate Checkpoints
+
+After all batches complete, merge checkpoint files into final JSON:
+
+```python
+import json
+import glob
 from tools.observatory_seeder import merge_validated_observatories
 
-# Build list of validated observatories from this run
-new_observatories = [
+# Read all checkpoint files
+all_results = []
+batch_files = sorted(glob.glob('seed_data/temp/batch_*.json'))
+
+for batch_file in batch_files:
+    with open(batch_file) as f:
+        batch_data = json.load(f)
+        all_results.extend(batch_data['results'])
+
+# Build validated list (only those with final_url)
+# Note: country and elevation are NOT included - Mapbox provides during seeding
+validated = [
     {
-        "name": "Observatory Name",
-        "latitude": 19.823,
-        "longitude": -155.476,
-        "elevation": 4136,
-        "country": "Country",
-        "image_url": "https://upload.wikimedia.org/...",  # The validated URL
-        "validation_notes": "Description of what image shows"
-    },
-    # ... more observatories
+        "name": r["name"],
+        "latitude": r["latitude"],
+        "longitude": r["longitude"],
+        "image_url": r["final_url"],
+        "validation_notes": r["notes"]
+    }
+    for r in all_results if r.get("final_url")
 ]
 
-# Merge into existing JSON (dedupes by coords with 2 decimal precision)
-path, total_count, added_count = merge_validated_observatories(new_observatories)
+# Merge into validated_observatories.json
+path, total_count, added_count = merge_validated_observatories(validated)
 print(f"Added {added_count} new, total now {total_count}")
+
+# Clean up checkpoint files
+for batch_file in batch_files:
+    os.remove(batch_file)
+print("Checkpoint files cleaned up")
 ```
 
-### Step 6: Seed to Database
+---
+
+### Step 5: Seed to Database
 
 ```bash
 djvenv/bin/python manage.py seed_locations --type=observatory
 ```
 
-The seeder will:
-1. Read validated_observatories.json
-2. Download each image directly from the validated URL
-3. Process and save to database with thumbnail generation
+The seeder:
+1. Reads validated_observatories.json
+2. Downloads each image from validated URL (ONLY time images are downloaded)
+3. Creates Location records in database
+4. Generates thumbnails
 
-**Note:** This is the ONLY time images are downloaded - directly from validated URLs.
+---
 
-### Step 7: Display Final Metrics
-
-**IMPORTANT:** After seeding completes, ALWAYS display these metrics:
+### Step 6: Display Final Metrics
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
@@ -191,85 +296,68 @@ The seeder will:
 ║    Already in database:        {duplicates}                  ║
 ║    New to process:             {new_count}                   ║
 ║                                                              ║
-║  CHROME VALIDATION (zero downloads)                          ║
+║  VALIDATION                                                  ║
+║    Method:                     {direct|orchestrated}         ║
+║    Batches processed:          {batch_count}                 ║
 ║    Primary images accepted:    {primary_accepted}            ║
-║    Primary images rejected:    {primary_rejected}            ║
-║    Fallback URLs validated:    {fallback_accepted}           ║
+║    Fallback URLs used:         {fallback_used}               ║
 ║    No valid image found:       {no_valid_image}              ║
 ║                                                              ║
 ║  FINAL RESULTS                                               ║
 ║    Observatories validated:    {total_validated}             ║
 ║    Acceptance rate:            {acceptance_rate}%            ║
 ║    Locations seeded to DB:     {seeded_count}                ║
-║    Images downloaded:          {seeded_count} (at seed time) ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-**Expected acceptance rate:** 80-95% with fallback logic
+---
 
-## File Locations
+## Validation Criteria
 
-| File | Purpose |
-|------|---------|
-| `tools/observatory_seeder/` | Python pipeline scripts |
-| `seed_data/temp/discovered.json` | Temporary discovery data |
-| `seed_data/validated_observatories.json` | Output file (commit for production) |
+**ACCEPT** if image shows:
+- Observatory buildings or domes
+- Telescope structures (optical or radio)
+- Antenna arrays or dishes
+- Facility grounds with visible structures
 
-## Production Workflow
+**REJECT** if image shows:
+- Astronomical objects only (nebulae, galaxies, star fields)
+- Landscapes without visible structures
+- Diagrams, charts, or illustrations
+- Unrelated images
 
-### Local Development (with Claude Code)
+---
 
-```bash
-# Run the skill to discover, validate, and generate JSON
-/seed-observatories --limit 25
+## Crash Recovery
 
-# Commit the validated JSON to your repo
-git add seed_data/validated_observatories.json
-git commit -m "Add validated observatories"
-git push
-```
-
-### Production Deployment (Render)
+If session crashes mid-validation:
 
 ```bash
-# Run via Render Shell (not on every deploy)
-python manage.py seed_locations --type=observatory
+# Next session - check for checkpoints
+/seed-observatories --resume
 ```
 
-This downloads images from URLs at runtime and uploads to R2 storage.
+This will:
+1. Find existing `batch_*.json` files
+2. Determine which batch to continue from
+3. Skip already-completed batches
+4. Continue validation from where it left off
 
-### Duplicate Handling
+---
 
-**Deduplication happens at TWO stages:**
+## Deduplication
 
-1. **Discovery dedupe (Step 1):** Compares against database by coordinates (2 decimal precision ~1km)
-2. **JSON merge dedupe (Step 5):** Compares against existing JSON by coordinates
+Happens at TWO stages:
 
-```
-Example: 5 observatories already in database
+1. **Discovery dedupe**: Python script checks database, removes existing observatories
+2. **JSON merge dedupe**: `merge_validated_observatories()` checks coordinates (2 decimal precision ~1km)
 
-Run: /seed-observatories --limit 15
-  → Discovers 15 from Wikidata
-  → Dedupe: 5 already exist, removed from list
-  → Chrome validates 10 URLs (ZERO downloads!)
-  → 8 accepted, 2 rejected with no valid fallback
-  → Merges 8 into JSON
-  → Seeding: 8 created (downloads happen here)
+---
 
-Run again: /seed-observatories --limit 15
-  → Discovers same 15 from Wikidata
-  → Dedupe: 13 already exist, 2 remain
-  → Chrome validates 2 URLs
-  → Seeds to DB
-```
+## Chrome Tools
 
-### When to Run on Render
+Uses Chrome browser for image validation:
+- **Built-in Claude Chrome** (preferred): Via `claude --chrome` or extension
+- **Chrome DevTools MCP**: Fallback if MCP server configured
 
-| Scenario | Run seed_locations? |
-|----------|---------------------|
-| First deploy | Yes (once) |
-| Code-only deploy | No |
-| New observatories added to JSON | Yes |
-| Re-deploy same code | No (duplicates skipped anyway) |
-
-**Tip:** Run manually via Render Shell rather than on every deploy.
+Both work the same way - navigate to URL, screenshot, validate with vision.
