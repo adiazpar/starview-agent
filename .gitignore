@@ -1,4 +1,6 @@
 # Starview Agent .gitignore
+.DS_Store
+
 settings.local.json
 .session-changes.log
 pending-changes.log
