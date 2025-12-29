@@ -70,9 +70,21 @@ Parse from user input:
 
 Observatory `type_metadata` enables frontend features:
 - **Call button**: Uses `phone_number` (E.164) for `tel:` links, `phone_display` for UI
-- **Website button**: Uses `website` URL (HTTPS-upgraded when possible)
+- **Website button**: Uses `website` URL (validated with soft 404 detection)
 
 These buttons appear in the ExploreMap location popup for observatory locations.
+
+## URL Validation (Three-Tier System)
+
+Website URLs undergo tiered validation to ensure they're valid:
+
+| Tier | Phase | What It Does |
+|------|-------|--------------|
+| **Tier 1** | Discovery | Soft 404 detection - checks page content for error patterns |
+| **Tier 2** | Sub-agent | Web search fallback - finds alternative URLs if missing |
+| **Tier 3** | Sub-agent | AI vision - verifies page looks like real observatory site |
+
+**Tier 1 runs automatically during discovery.** Invalid URLs (soft 404s, connection errors) are excluded from `type_metadata`. Sub-agents can optionally run Tier 2 search for observatories missing website URLs.
 
 ## Execution Steps
 
@@ -115,7 +127,11 @@ This:
    - Phone (P1329) and website (P856) for `type_metadata`
 2. **Enriches type_metadata** during discovery:
    - Phone numbers normalized to E.164 format (`+12505551234`) with display format (`+1-250-555-1234`)
-   - Website URLs upgraded from HTTP to HTTPS (verified via HEAD request, falls back to HTTP if HTTPS fails)
+   - Website URLs validated with **soft 404 detection** (Tier 1):
+     - Detects pages returning HTTP 200 but showing error content
+     - Multi-language patterns: "404", "not found", "página no encontrada", etc.
+     - Invalid URLs excluded from type_metadata (sub-agents can search for alternatives)
+     - Valid URLs upgraded to HTTPS when available
 3. **Dedupes against validated_observatories.json** (removes observatories already in JSON)
 4. Saves NEW observatories to `seed_data/temp/discovered.json`
 
@@ -162,16 +178,18 @@ batch_data = observatories[start:end]  # slice for this batch
 You are an OBSERVATORY IMAGE VALIDATION AGENT.
 
 ## YOUR TASK
-Validate observatory images and write results to a checkpoint file.
+Validate observatory images and optionally find website URLs.
 
 ## INPUT - Observatory batch:
 {batch_json}
 
 Note: Input contains essential fields (slug, name, latitude, longitude, image_url).
-May also include type_metadata (phone, website) - preserve this in output.
+May include type_metadata (phone, website) - preserve and potentially enhance.
 Country and elevation are NOT included - Mapbox provides these during seeding.
 
 ## VALIDATION PROCESS
+
+### Image Validation (Required)
 For each observatory:
 1. Navigate Chrome to the image_url
 2. Take screenshot (DO NOT save screenshot to file)
@@ -186,10 +204,17 @@ For each observatory:
    ```
    Validate each fallback URL until one is ACCEPTED.
 
+### Website Search (Optional - Tier 2)
+If type_metadata is missing `website` field, optionally search for official website:
+1. Use WebSearch: `"{observatory_name}" official website`
+2. Look for .edu, .gov, .org domains (universities, government, research institutions)
+3. Validate candidate URLs with vision to ensure they're real pages (not error pages)
+4. If found, add to type_metadata
+
 ## OUTPUT
 Write results to checkpoint file: seed_data/temp/batch_{batch_num:03d}.json
 
-**CRITICAL: Copy all metadata fields EXACTLY as provided. Do NOT modify slug, name, latitude, or longitude. Only set accepted, final_url, used_fallback, and notes.**
+**CRITICAL: Copy all metadata fields EXACTLY as provided. Do NOT modify slug, name, latitude, or longitude.**
 
 ```python
 import json
@@ -203,9 +228,15 @@ results = {
             "latitude": 12.345,
             "longitude": -67.890,
             "original_url": "http://...",
-            "type_metadata": {...},  # COPY FROM INPUT if present (phone, website)
 
-            # THESE ARE YOUR VALIDATION RESULTS:
+            # type_metadata: COPY FROM INPUT, may add website if found via search
+            "type_metadata": {
+                "phone_number": "+1234567890",
+                "phone_display": "+1-234-567-890",
+                "website": "https://..."  # From discovery OR added via Tier 2 search
+            },
+
+            # IMAGE VALIDATION RESULTS:
             "final_url": "http://...",  # original if accepted, fallback if found, null if none
             "accepted": True,
             "used_fallback": False,
@@ -217,7 +248,8 @@ results = {
         "accepted": N,
         "rejected": N,
         "fallback_found": N,
-        "no_valid_image": N
+        "no_valid_image": N,
+        "websites_found": N  # Count of websites added via Tier 2 search
     }
 }
 with open('seed_data/temp/batch_{batch_num:03d}.json', 'w') as f:
@@ -229,7 +261,8 @@ After writing the file, output: "Checkpoint saved: batch_{batch_num:03d}.json"
 CRITICAL RULES:
 - DO NOT save screenshots to disk
 - DO NOT modify metadata (slug, name, latitude, longitude) - copy exactly
-- ONLY determine: accepted (true/false), final_url, and notes
+- Image validation is REQUIRED, website search is OPTIONAL
+- Prioritize image validation - website search is best-effort
 ```
 
 **After each sub-agent completes:**
@@ -322,11 +355,16 @@ The seeder:
 ║    Already in JSON:            {duplicates}                  ║
 ║    New to process:             {new_count}                   ║
 ║                                                              ║
-║  VALIDATION                                                  ║
+║  IMAGE VALIDATION                                            ║
 ║    Sub-agent batches:          {batch_count}                 ║
 ║    Primary images accepted:    {primary_accepted}            ║
 ║    Fallback URLs used:         {fallback_used}               ║
 ║    No valid image found:       {no_valid_image}              ║
+║                                                              ║
+║  WEBSITE VALIDATION                                          ║
+║    Valid from Wikidata:        {wikidata_valid}              ║
+║    Soft 404s rejected:         {soft_404_rejected}           ║
+║    Found via search:           {search_found}                ║
 ║                                                              ║
 ║  RESULTS                                                     ║
 ║    Observatories validated:    {total_validated}             ║
@@ -351,11 +389,16 @@ The seeder:
 ║    Already in JSON:            {duplicates}                  ║
 ║    New to process:             {new_count}                   ║
 ║                                                              ║
-║  VALIDATION                                                  ║
+║  IMAGE VALIDATION                                            ║
 ║    Sub-agent batches:          {batch_count}                 ║
 ║    Primary images accepted:    {primary_accepted}            ║
 ║    Fallback URLs used:         {fallback_used}               ║
 ║    No valid image found:       {no_valid_image}              ║
+║                                                              ║
+║  WEBSITE VALIDATION                                          ║
+║    Valid from Wikidata:        {wikidata_valid}              ║
+║    Soft 404s rejected:         {soft_404_rejected}           ║
+║    Found via search:           {search_found}                ║
 ║                                                              ║
 ║  FINAL RESULTS                                               ║
 ║    Observatories validated:    {total_validated}             ║
