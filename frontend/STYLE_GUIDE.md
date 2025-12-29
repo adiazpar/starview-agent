@@ -1,6 +1,6 @@
 # Starview Frontend Style Guide
 
-**Last Updated:** 2025-11-28
+**Last Updated:** 2025-12-29
 **Design System:** Linear-inspired glass-morphism
 **Source of Truth:** `starview_frontend/src/styles/global.css`
 
@@ -325,6 +325,37 @@ Utility classes for entrance animations and loading states.
 | `.animate-spin` | 360-degree rotation (1s linear infinite) |
 
 **Accessibility:** All animations are automatically disabled when the user has `prefers-reduced-motion: reduce` enabled in their system settings.
+
+**Staggered Card Animation** - LocationCard uses CSS custom properties for staggered entrance:
+
+```css
+/* In component CSS */
+.location-card {
+  animation: fadeInUp 0.5s ease-out backwards;
+  animation-delay: calc(var(--card-index, 0) * 0.08s);
+}
+
+/* Set via inline style */
+<article style={{ '--card-index': index }}>
+```
+
+**Dropdown Fade Animation** - For dropdowns with close animation timing:
+
+```css
+.dropdown {
+  --dropdown-animation-duration: 0.1s;
+  animation: dropdownFadeIn var(--dropdown-animation-duration) ease-out forwards;
+}
+
+.dropdown--closing {
+  animation: dropdownFadeOut var(--dropdown-animation-duration) ease-out forwards;
+}
+
+@keyframes dropdownFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dropdownFadeOut { from { opacity: 1; } to { opacity: 0; } }
+```
+
+Use with `useAnimatedDropdown` hook for coordinated close timing.
 
 ---
 

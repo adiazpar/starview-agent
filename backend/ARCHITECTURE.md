@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2025-12-28 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2025-12-29 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -24,7 +24,7 @@
 - **ContentTypes:** Generic voting/reporting on any model
 - **Signals:** Auto file cleanup + badge awarding
 - **Nested API:** `/api/locations/{id}/reviews/{id}/comments/`
-- **Caching:** Redis with 96% query reduction on badge progress
+- **Caching:** Redis with version-based map GeoJSON invalidation (O(1) for any user count)
 
 ---
 
@@ -297,6 +297,7 @@ Custom adapters and views that redirect django-allauth HTML pages to React front
 
 ### Management Commands
 ```bash
+# User & Content Maintenance
 cleanup_unverified_users --days 30    # Delete old unverified accounts
 cleanup_email_suppressions            # Weekly bounce/complaint cleanup
   --soft-bounce-days 30               #   Days before recovering soft bounces
@@ -305,8 +306,25 @@ cleanup_email_suppressions            # Weekly bounce/complaint cleanup
   --report                            #   Generate health report to stdout
   --email-report user@example.com     #   Email weekly report
 archive_audit_logs --days 30          # Archive old audit logs to R2
+
+# Badge System
 audit_badges                          # Audit badge system integrity
 award_pioneer_badges                  # Award early adopter badges
+
+# Location Enrichment
+enrich_locations                      # Re-enrich locations with Mapbox data
+  --dry-run                           #   Preview without making changes
+  --id 123                            #   Enrich specific location
+  --type observatory                  #   Filter by location type
+  --delay 0.5                         #   Delay between API calls (default: 0.5s)
+seed_locations                        # Seed locations from JSON files
+
+# Cache & Deployment
+warm_cache                            # Pre-warm Redis caches after deployment
+  --dry-run                           #   Preview what would be cached
+  --pages 5                           #   Number of list pages to warm (default: 5)
+
+# Setup & Diagnostics
 setup_google_oauth                    # Setup Google OAuth credentials
 diagnose_db                           # Diagnose database issues
 ```
@@ -346,6 +364,8 @@ diagnose_db                           # Diagnose database issues
 | Location detail | 15 min | 4x faster |
 | Map GeoJSON | 30 min | 60x faster (version-based O(1) invalidation) |
 | Badge progress | 5 min | 25x faster (cache hit) |
+
+**Cache Warming:** Use `python manage.py warm_cache` after deployments to pre-warm anonymous caches (map GeoJSON, location list pages, platform stats).
 
 ### Async Tasks (Celery, optional)
 - Location enrichment runs in background
@@ -408,7 +428,7 @@ starview_app/
 │   ├── throttles.py           # Rate limiting
 │   ├── exception_handler.py   # DRF error handling
 │   ├── adapters.py            # django-allauth customization (React redirects, OAuth adapters)
-│   └── cache_keys.py          # Redis cache key management
+│   └── cache.py               # Redis cache keys, version-based invalidation
 ├── sitemaps.py                    # XML sitemaps for SEO
 └── management/commands/
     ├── cleanup_unverified_users.py
@@ -416,6 +436,9 @@ starview_app/
     ├── archive_audit_logs.py
     ├── audit_badges.py
     ├── award_pioneer_badges.py
+    ├── seed_locations.py
+    ├── enrich_locations.py         # Re-enrich with Mapbox geocoding/elevation
+    ├── warm_cache.py               # Pre-warm Redis caches after deployment
     ├── setup_google_oauth.py
     └── diagnose_db.py
 ```

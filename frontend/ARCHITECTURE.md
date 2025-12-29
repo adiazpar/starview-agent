@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2025-12-28 (Sprint 09)
+**Last Updated:** 2025-12-29 (Sprint 10)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -95,7 +95,9 @@ starview_frontend/src/
 │   ├── useProfileData.js          # React Query hook for profile data
 │   ├── useStats.js                # React Query hook for platform stats
 │   ├── useLocations.js            # React Query hooks: useLocations (infinite), useLocationsPaginated, useToggleFavorite
-│   ├── useMapMarkers.js           # React Query hook for lightweight map marker data
+│   ├── useMapMarkers.js           # React Query hook for map GeoJSON (30-min stale time, O(1) lookup via markerMap)
+│   ├── useExploreData.js          # Unified data hook - switches between infinite (mobile) and paginated (desktop)
+│   ├── useAnimatedDropdown.js     # Dropdown state with CSS animation timing
 │   ├── useIntersectionObserver.js # Viewport detection for infinite scroll
 │   ├── useUserLocation.js         # Browser geolocation with profile location fallback
 │   ├── useMediaQuery.js           # CSS media query detection (useIsDesktop helper)
@@ -219,6 +221,8 @@ Re-render
 | `useStats.js` | React Query hook for platform statistics |
 | `useLocations.js` | React Query hooks: `useLocations` (infinite), `useLocationsPaginated` (desktop), `useToggleFavorite` |
 | `useMapMarkers.js` | React Query hook for map GeoJSON; returns `{ geojson, markers, markerMap }` (30-min stale time) |
+| `useExploreData.js` | Unified data fetching for Explore page - automatically uses infinite (mobile) or paginated (desktop) |
+| `useAnimatedDropdown.js` | Dropdown state management with CSS close animation timing |
 | `useIntersectionObserver.js` | Viewport detection for infinite scroll triggers |
 | `useUserLocation.js` | Browser geolocation with profile location fallback, 30-min cache |
 | `useMediaQuery.js` | CSS media query subscription; `useIsDesktop()` returns true at 1024px+ |
@@ -231,9 +235,18 @@ Re-render
 | `Alert` | Success/error/warning/info alerts with icons |
 | `LoadingSpinner` | Reusable loading indicator (multiple sizes) |
 | `ErrorBoundary` | App-wide error catching |
-| `ImageCarousel` | Swipe (mobile) + arrow (desktop) image carousel with auto-play |
+| `ImageCarousel` | Swipe (mobile) + arrow (desktop) image carousel with auto-play, lazy loading |
 | `LocationAutocomplete` | Mapbox location search autocomplete |
 | `ProfilePictureModal` | Modal for profile picture preview/zoom |
+
+### Explore Page Components (`components/explore/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `ExploreMap` | Mapbox GL map with clustered markers, bottom card, map controls |
+| `LocationCard` | Mobile-first location card with image carousel, rating, distance, favorite toggle |
+| `Pagination` | Desktop page navigation controls |
+| `ViewToggle` | List/map view toggle button |
 
 ---
 
@@ -387,6 +400,7 @@ const queryClient = new QueryClient({
 - `usePlatformStats()` - Platform statistics with threshold logic
 - `useLocations()` - Infinite scroll locations for mobile
 - `useLocationsPaginated()` - Paginated locations for desktop
+- `useExploreData()` - Unified hook that selects infinite/paginated based on viewport
 - `useMapMarkers()` - Map GeoJSON with `markerMap` for O(1) lookups (30-min stale time)
 - `useToggleFavorite()` - Mutation with optimistic cache updates (syncs infinite, paginated, and mapGeoJSON caches)
 
