@@ -24,17 +24,19 @@ Parse from user input:
 | Limit | Use Case | Session Time |
 |-------|----------|--------------|
 | 5-10 | Testing | ~5 min |
-| **25** | **Recommended max** | ~15-20 min |
+| **20** | **Recommended max per session** | ~15-20 min |
 
-**Maximum batch size: 25 observatories**
+**Maximum batch size: 20 observatories per session**
 
-For more observatories, use pagination:
+Due to Claude API limits on multi-image requests (max 2000px per image when many images in context), larger batches can cause session crashes. Use pagination across fresh sessions:
 
 ```
-Session 1: /seed-observatories --limit 25              # Gets #1-25
-Session 2: /seed-observatories --limit 25 --offset 25  # Gets #26-50
-Session 3: /seed-observatories --limit 25 --offset 50  # Gets #51-75
+Session 1: /seed-observatories --limit 20              # Gets #1-20
+Session 2: /seed-observatories --limit 20 --offset 20  # Gets #21-40  (NEW SESSION)
+Session 3: /seed-observatories --limit 20 --offset 40  # Gets #41-60  (NEW SESSION)
 ```
+
+**IMPORTANT:** Start a **fresh Claude session** for each batch to avoid accumulating images in context.
 
 **Max available**: ~3,484 observatories in Wikidata
 
@@ -83,11 +85,17 @@ If all discovered observatories already exist, the pipeline exits early.
 
 Validate images using Chrome DevTools MCP WITHOUT downloading. Chrome navigates directly to the image URL.
 
+**IMPORTANT - Viewport Size Failsafe:**
+Before starting validation, resize the browser to ensure screenshots stay under Claude's 2000px limit:
+```
+mcp__chrome-devtools__resize_page(width=1600, height=900)
+```
+
 For each observatory in `discovered.json` with an `image_url`:
 
 1. **Navigate to image URL:**
    ```
-   mcp__chrome-devtools__new_page(url="{image_url}")
+   mcp__chrome-devtools__navigate_page(url="{image_url}")
    ```
 
 2. **Take screenshot:**
