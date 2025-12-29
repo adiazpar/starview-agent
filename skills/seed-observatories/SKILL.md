@@ -18,6 +18,7 @@ Parse from user input:
 - `--offset N`: Skip first N observatories (for pagination)
 - `--min-elevation N`: Filter by minimum elevation in meters
 - `--country "Name"`: Filter by country name
+- `--prepare-only`: Skip database seeding (Step 5). Updates validated_observatories.json only. Use this to prepare data locally, commit it, then run `seed_locations` on production.
 
 **Resume behavior:** If checkpoint files exist (`batch_*.json`), the skill automatically detects them in Step 1 and asks whether to resume or start fresh. No flag needed.
 
@@ -261,6 +262,8 @@ print("Temp directory cleaned up")
 
 ### Step 5: Seed to Database
 
+**Skip this step if `--prepare-only` flag is set.**
+
 ```bash
 djvenv/bin/python manage.py seed_locations --type=observatory
 ```
@@ -274,6 +277,38 @@ The seeder:
 ---
 
 ### Step 6: Display Final Metrics
+
+**If `--prepare-only` was used**, display this version (no seeding stats):
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║           OBSERVATORY VALIDATION COMPLETE                    ║
+║                  (--prepare-only mode)                       ║
+╠══════════════════════════════════════════════════════════════╣
+║  DISCOVERY                                                   ║
+║    Total from Wikidata:        {discovered}                  ║
+║    Already in database:        {duplicates}                  ║
+║    New to process:             {new_count}                   ║
+║                                                              ║
+║  VALIDATION                                                  ║
+║    Sub-agent batches:          {batch_count}                 ║
+║    Primary images accepted:    {primary_accepted}            ║
+║    Fallback URLs used:         {fallback_used}               ║
+║    No valid image found:       {no_valid_image}              ║
+║                                                              ║
+║  RESULTS                                                     ║
+║    Observatories validated:    {total_validated}             ║
+║    Acceptance rate:            {acceptance_rate}%            ║
+║    Added to JSON:              {added_to_json}               ║
+║    Total in JSON:              {total_in_json}               ║
+║                                                              ║
+║  NEXT STEP                                                   ║
+║    Commit validated_observatories.json, then on production:  ║
+║    python manage.py seed_locations --type=observatory        ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+**If full seeding was performed**, display this version:
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
