@@ -143,7 +143,8 @@ Validate observatory images and write results to a checkpoint file.
 ## INPUT - Observatory batch:
 {batch_json}
 
-Note: Input contains only essential fields (slug, name, latitude, longitude, image_url).
+Note: Input contains essential fields (slug, name, latitude, longitude, image_url).
+May also include type_metadata (phone, website) - preserve this in output.
 Country and elevation are NOT included - Mapbox provides these during seeding.
 
 ## VALIDATION PROCESS
@@ -178,6 +179,7 @@ results = {
             "latitude": 12.345,
             "longitude": -67.890,
             "original_url": "http://...",
+            "type_metadata": {...},  # COPY FROM INPUT if present (phone, website)
 
             # THESE ARE YOUR VALIDATION RESULTS:
             "final_url": "http://...",  # original if accepted, fallback if found, null if none
@@ -233,16 +235,21 @@ for batch_file in batch_files:
 
 # Build validated list (only those with final_url)
 # Note: country and elevation are NOT included - Mapbox provides during seeding
-validated = [
-    {
+validated = []
+for r in all_results:
+    if not r.get("final_url"):
+        continue
+    entry = {
         "name": r["name"],
         "latitude": r["latitude"],
         "longitude": r["longitude"],
         "image_url": r["final_url"],
         "validation_notes": r["notes"]
     }
-    for r in all_results if r.get("final_url")
-]
+    # Preserve type_metadata (phone, website) from discovery
+    if r.get("type_metadata"):
+        entry["type_metadata"] = r["type_metadata"]
+    validated.append(entry)
 
 # Merge into validated_observatories.json
 path, total_count, added_count = merge_validated_observatories(validated)
