@@ -24,11 +24,13 @@ Parse from user input:
 
 | Limit | Approach | Context Impact |
 |-------|----------|----------------|
-| 1-15 | Direct validation | Manager handles directly |
-| 16-50 | **Orchestrated** | Sub-agents handle batches |
+| 1-15 | Single sub-agent | One validation batch |
+| 16-50 | **Orchestrated** | Multiple sub-agents handle batches |
 | 51+ | Multi-session | Split across sessions |
 
 **Max available**: ~3,484 observatories in Wikidata
+
+**IMPORTANT:** The manager NEVER performs image validation directly. All validation is delegated to sub-agents which have access to Chrome DevTools MCP tools.
 
 ## Architecture: Manager + Sub-Agents
 
@@ -106,7 +108,7 @@ If all discovered observatories already exist, exit early.
 
 ---
 
-### Step 3: Validation
+### Step 3: Validation via Sub-Agents
 
 Read discovered.json and count observatories:
 
@@ -117,26 +119,7 @@ with open('seed_data/temp/discovered.json') as f:
 count = len(observatories)
 ```
 
-**Decision:**
-- If `count <= 15`: Use Step 3a (direct validation)
-- If `count > 15`: Use Step 3b (orchestrated sub-agents)
-
----
-
-### Step 3a: Direct Validation (small batches ≤15)
-
-Manager validates directly using Chrome:
-
-1. Navigate to each image_url
-2. Take screenshot and validate with vision
-3. ACCEPT/REJECT based on criteria (see Validation Criteria below)
-4. For rejects, search Wikimedia Commons for fallback URLs
-5. Write results to `seed_data/temp/batch_001.json`
-6. Proceed to Step 4
-
----
-
-### Step 3b: Orchestrated Validation (large batches >15)
+**IMPORTANT:** The manager NEVER validates images directly. All validation is delegated to sub-agents which have Chrome DevTools MCP access for browser automation.
 
 Split observatories into batches of 10-15 each. Spawn sub-agents **sequentially**.
 
@@ -263,10 +246,14 @@ validated = [
 path, total_count, added_count = merge_validated_observatories(validated)
 print(f"Added {added_count} new, total now {total_count}")
 
-# Clean up checkpoint files
+# Clean up temp directory
 for batch_file in batch_files:
     os.remove(batch_file)
-print("Checkpoint files cleaned up")
+if os.path.exists('seed_data/temp/discovered.json'):
+    os.remove('seed_data/temp/discovered.json')
+if os.path.exists('seed_data/temp') and not os.listdir('seed_data/temp'):
+    os.rmdir('seed_data/temp')
+print("Temp directory cleaned up")
 ```
 
 ---
@@ -297,8 +284,7 @@ The seeder:
 ║    New to process:             {new_count}                   ║
 ║                                                              ║
 ║  VALIDATION                                                  ║
-║    Method:                     {direct|orchestrated}         ║
-║    Batches processed:          {batch_count}                 ║
+║    Sub-agent batches:          {batch_count}                 ║
 ║    Primary images accepted:    {primary_accepted}            ║
 ║    Fallback URLs used:         {fallback_used}               ║
 ║    No valid image found:       {no_valid_image}              ║
@@ -356,8 +342,17 @@ Happens at TWO stages:
 
 ## Chrome Tools
 
-Uses Chrome browser for image validation:
-- **Built-in Claude Chrome** (preferred): Via `claude --chrome` or extension
-- **Chrome DevTools MCP**: Fallback if MCP server configured
+**Requires Chrome DevTools MCP** for sub-agent browser automation.
 
-Both work the same way - navigate to URL, screenshot, validate with vision.
+Sub-agents inherit MCP tools from the parent session, so Chrome DevTools MCP must be configured:
+
+```bash
+claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
+```
+
+The sub-agents use these MCP tools:
+- `mcp__chrome-devtools__new_page` - Navigate to image URL
+- `mcp__chrome-devtools__take_screenshot` - Capture image for vision validation
+- `mcp__chrome-devtools__close_page` - Clean up after validation
+
+**Note:** Built-in Claude Chrome (`claude --chrome`) does NOT work for sub-agents since it's a CLI flag, not an inheritable tool. Only MCP tools are inherited by sub-agents.
