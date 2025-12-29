@@ -204,12 +204,13 @@ For each observatory:
    ```
    Validate each fallback URL until one is ACCEPTED.
 
-### Website Search (Optional - Tier 2)
-If type_metadata is missing `website` field, optionally search for official website:
+### Website Search (Required - Tier 2)
+If type_metadata is missing `website` field, search for official website:
 1. Use WebSearch: `"{observatory_name}" official website`
 2. Look for .edu, .gov, .org domains (universities, government, research institutions)
-3. Validate candidate URLs with vision to ensure they're real pages (not error pages)
-4. If found, add to type_metadata
+3. Navigate Chrome to top candidate, take screenshot, verify it's a real page (not error page)
+4. If valid, add to type_metadata: `"website": "https://..."`
+5. If no valid website found, leave website field empty
 
 ## OUTPUT
 Write results to checkpoint file: seed_data/temp/batch_{batch_num:03d}.json
@@ -261,8 +262,8 @@ After writing the file, output: "Checkpoint saved: batch_{batch_num:03d}.json"
 CRITICAL RULES:
 - DO NOT save screenshots to disk
 - DO NOT modify metadata (slug, name, latitude, longitude) - copy exactly
-- Image validation is REQUIRED, website search is OPTIONAL
-- Prioritize image validation - website search is best-effort
+- Image validation is REQUIRED
+- Website search is REQUIRED if type_metadata has no website field
 ```
 
 **After each sub-agent completes:**
