@@ -18,7 +18,8 @@ Parse from user input:
 - `--offset N`: Skip first N observatories (for pagination)
 - `--min-elevation N`: Filter by minimum elevation in meters
 - `--country "Name"`: Filter by country name
-- `--resume`: Resume from checkpoint files (skip discovery, continue validation)
+
+**Resume behavior:** If checkpoint files exist (`batch_*.json`), the skill automatically detects them in Step 1 and asks whether to resume or start fresh. No flag needed.
 
 ## Batch Limits
 
@@ -316,18 +317,17 @@ The seeder:
 
 ## Crash Recovery
 
-If session crashes mid-validation:
+If session crashes mid-validation, just run the skill again:
 
 ```bash
-# Next session - check for checkpoints
-/seed-observatories --resume
+/seed-observatories --limit 25
 ```
 
-This will:
-1. Find existing `batch_*.json` files
-2. Determine which batch to continue from
-3. Skip already-completed batches
-4. Continue validation from where it left off
+The skill automatically:
+1. Detects existing `batch_*.json` checkpoint files
+2. Asks whether to resume or start fresh
+3. If resuming, skips discovery and continues from the next batch
+4. Merges all checkpoints when complete
 
 ---
 
