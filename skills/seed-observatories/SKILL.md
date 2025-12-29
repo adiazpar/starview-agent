@@ -62,9 +62,17 @@ Parse from user input:
 
 | File | Purpose |
 |------|---------|
-| `seed_data/temp/discovered.json` | All discovered observatories (from Wikidata) |
+| `seed_data/temp/discovered.json` | Discovered observatories with type_metadata (from Wikidata) |
 | `seed_data/temp/batch_NNN.json` | Checkpoint: validated results from sub-agent N |
 | `seed_data/validated_observatories.json` | Final output (cumulative, commit to repo) |
+
+## type_metadata Usage
+
+Observatory `type_metadata` enables frontend features:
+- **Call button**: Uses `phone_number` (E.164) for `tel:` links, `phone_display` for UI
+- **Website button**: Uses `website` URL (HTTPS-upgraded when possible)
+
+These buttons appear in the ExploreMap location popup for observatory locations.
 
 ## Execution Steps
 
@@ -102,11 +110,27 @@ djvenv/bin/python -m tools.observatory_seeder.run --discover --limit <N> --offse
 ```
 
 This:
-1. Queries Wikidata for observatory metadata (including image_url)
-2. **Dedupes against database** (removes observatories that already exist)
-3. Saves NEW observatories to `seed_data/temp/discovered.json`
+1. Queries Wikidata SPARQL for observatory metadata:
+   - Name, coordinates, image_url
+   - Phone (P1329) and website (P856) for `type_metadata`
+2. **Enriches type_metadata** during discovery:
+   - Phone numbers normalized to E.164 format (`+12505551234`) with display format (`+1-250-555-1234`)
+   - Website URLs upgraded from HTTP to HTTPS (verified via HEAD request, falls back to HTTP if HTTPS fails)
+3. **Dedupes against validated_observatories.json** (removes observatories already in JSON)
+4. Saves NEW observatories to `seed_data/temp/discovered.json`
 
-If all discovered observatories already exist, exit early.
+**type_metadata structure:**
+```json
+{
+  "phone_number": "+12505551234",
+  "phone_display": "+1-250-555-1234",
+  "website": "https://observatory.example.org"
+}
+```
+
+Note: The `seed_locations` command handles database deduplication separately during seeding.
+
+If all discovered observatories already exist in the JSON, exit early.
 
 ---
 
@@ -277,9 +301,10 @@ djvenv/bin/python manage.py seed_locations --type=observatory
 
 The seeder:
 1. Reads validated_observatories.json
-2. Downloads each image from validated URL (ONLY time images are downloaded)
-3. Creates Location records in database
-4. Generates thumbnails
+2. Skips locations that already exist in database (by name + coordinates)
+3. Downloads each image from validated URL (ONLY time images are downloaded)
+4. Creates Location records in database
+5. Generates thumbnails
 
 ---
 
@@ -294,7 +319,7 @@ The seeder:
 ╠══════════════════════════════════════════════════════════════╣
 ║  DISCOVERY                                                   ║
 ║    Total from Wikidata:        {discovered}                  ║
-║    Already in database:        {duplicates}                  ║
+║    Already in JSON:            {duplicates}                  ║
 ║    New to process:             {new_count}                   ║
 ║                                                              ║
 ║  VALIDATION                                                  ║
@@ -323,7 +348,7 @@ The seeder:
 ╠══════════════════════════════════════════════════════════════╣
 ║  DISCOVERY                                                   ║
 ║    Total from Wikidata:        {discovered}                  ║
-║    Already in database:        {duplicates}                  ║
+║    Already in JSON:            {duplicates}                  ║
 ║    New to process:             {new_count}                   ║
 ║                                                              ║
 ║  VALIDATION                                                  ║
@@ -375,10 +400,11 @@ The skill automatically:
 
 ## Deduplication
 
-Happens at TWO stages:
+Happens at THREE stages:
 
-1. **Discovery dedupe**: Python script checks database, removes existing observatories
+1. **Discovery dedupe**: Python script checks `validated_observatories.json`, removes observatories already in JSON
 2. **JSON merge dedupe**: `merge_validated_observatories()` checks coordinates (2 decimal precision ~1km)
+3. **Seeding dedupe**: `seed_locations` command checks database by name + coordinates, skips existing locations
 
 ---
 
