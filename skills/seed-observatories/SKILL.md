@@ -1,3 +1,8 @@
+---
+name: seed-observatories
+description: Orchestrated pipeline for seeding observatory locations from Wikidata with AI-validated images. Use when adding observatories to the database, seeding from Wikidata, or running the observatory seeding pipeline. Trigger phrases: "seed observatories", "add observatories", "run observatory seeder".
+---
+
 # Seed Observatories
 
 Orchestrated pipeline for seeding observatory locations from Wikidata with AI-validated images.
