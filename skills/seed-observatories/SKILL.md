@@ -82,6 +82,7 @@ These rules prevent checkpoint corruption:
 | `seed_data/temp/discovered.json` | Discovered observatories with type_metadata (from Wikidata) |
 | `seed_data/temp/batch_NNN.json` | Checkpoint: validated results from sub-agent N |
 | `seed_data/validated_observatories.json` | Final output (cumulative, commit to repo) |
+| `seed_data/rejected_observatories.json` | Observatories with no valid image found (for challenge skill) |
 
 ## type_metadata Usage
 
@@ -106,6 +107,107 @@ Website URLs undergo tiered validation to ensure they're valid:
 ## Execution Steps
 
 **IMPORTANT: Execute these steps automatically. Do not just display instructions.**
+
+---
+
+### Step 0: Self-Installation Check
+
+Before running the pipeline, verify the `observatory_seeder` package is installed:
+
+```python
+import subprocess
+import sys
+import os
+from pathlib import Path
+
+def find_virtualenv():
+    """
+    Find a Python virtual environment.
+
+    Detection order:
+    1. VIRTUAL_ENV environment variable (already activated)
+    2. Common venv directory names in current directory
+    3. Search upward for venv directories
+    4. Fall back to sys.executable
+    """
+    # 1. Check if a venv is already activated
+    if os.environ.get("VIRTUAL_ENV"):
+        venv_python = Path(os.environ["VIRTUAL_ENV"]) / "bin" / "python"
+        if venv_python.exists():
+            return str(venv_python)
+
+    # 2. Common virtual environment directory names (in priority order)
+    venv_names = [
+        "djvenv",      # Django convention
+        ".venv",       # Python default / common
+        "venv",        # Python default
+        "env",         # Common shorthand
+        ".env",        # Hidden variant (check it's a dir, not dotenv file)
+        "virtualenv",  # Explicit name
+    ]
+
+    # Check current directory first
+    cwd = Path.cwd()
+    for name in venv_names:
+        venv_path = cwd / name / "bin" / "python"
+        if venv_path.exists():
+            return str(venv_path)
+
+    # 3. Search upward (max 5 levels) for project root with venv
+    search_dir = cwd
+    for _ in range(5):
+        for name in venv_names:
+            venv_path = search_dir / name / "bin" / "python"
+            if venv_path.exists():
+                return str(venv_path)
+        parent = search_dir.parent
+        if parent == search_dir:
+            break
+        search_dir = parent
+
+    # 4. Fall back to current Python
+    return sys.executable
+
+def ensure_observatory_seeder():
+    """Install observatory_seeder if not available."""
+    try:
+        import observatory_seeder
+        print("✓ observatory_seeder is installed")
+        return True
+    except ImportError:
+        print("observatory_seeder not found. Installing...")
+
+        # Find the skill directory (relative to project root)
+        skill_dir = Path(".claude/skills/seed-observatories")
+        if not skill_dir.exists():
+            print("ERROR: Skill directory not found at .claude/skills/seed-observatories/")
+            return False
+
+        # Find Python executable
+        python = find_virtualenv()
+        print(f"Using Python: {python}")
+
+        # Install the package
+        result = subprocess.run(
+            [python, "-m", "pip", "install", "-e", str(skill_dir)],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode != 0:
+            print(f"Installation failed: {result.stderr}")
+            return False
+
+        print("✓ observatory_seeder installed successfully")
+        return True
+
+# Run the check
+if not ensure_observatory_seeder():
+    print("Cannot proceed without observatory_seeder package")
+    # Exit skill
+```
+
+This auto-installs the skill's Python tools on first run.
 
 ---
 
@@ -135,7 +237,7 @@ rm -f seed_data/temp/batch_*.json
 Run discovery to get observatory metadata from Wikidata:
 
 ```bash
-djvenv/bin/python -m tools.observatory_seeder.run --discover --limit <N> --offset <M>
+djvenv/bin/python -m observatory_seeder.run --discover --limit <N> --offset <M>
 ```
 
 This:
@@ -200,7 +302,7 @@ TASKS:
 3. REJECT if shows: space objects only, empty landscapes, diagrams
 4. If rejected, search for fallback image:
    ```python
-   from tools.observatory_seeder import search_wikimedia_commons
+   from observatory_seeder import search_wikimedia_commons
    results = search_wikimedia_commons("{name}", limit=5)
    ```
    Then validate ONE AT A TIME:
@@ -225,6 +327,9 @@ output = {
     },
     "websites_found": {
         "slug-1": "https://found-website.org"
+    },
+    "rejection_notes": {
+        "slug-3": "Original image shows moon/landscape. Fallback searches returned images of other observatories (ALMA, VLT)."
     }
 }
 with open("seed_data/temp/batch_{batch_num:03d}.json", "w") as f:
@@ -234,6 +339,7 @@ with open("seed_data/temp/batch_{batch_num:03d}.json", "w") as f:
 RULES:
 • "validated" = slug → accepted_image_url (or null if rejected)
 • "websites_found" = slug → website_url (only for NEW websites found via search)
+• "rejection_notes" = slug → brief explanation (only for rejected observatories)
 • Use exact slug from input as key
 • DO NOT copy name, coords, or other fields - manager has them
 ````
@@ -245,7 +351,7 @@ RULES:
 Sub-agents may return various formats. After each sub-agent returns, **run the normalization script**:
 
 ```bash
-python .claude/skills/seed-observatories/normalize_checkpoint.py \
+python -m observatory_seeder.normalize_checkpoint \
     seed_data/temp/batch_{batch_num:03d}.json {batch_num}
 ```
 
@@ -266,7 +372,7 @@ After all batches complete, merge checkpoints with discovered.json to build fina
 import json
 import glob
 import os
-from tools.observatory_seeder import merge_validated_observatories
+from observatory_seeder import merge_validated_observatories
 
 # 1. Load discovered.json (has all observatory metadata)
 with open('seed_data/temp/discovered.json') as f:
@@ -275,6 +381,7 @@ with open('seed_data/temp/discovered.json') as f:
 # 2. Collect all validation results from checkpoints
 all_validated = {}      # slug → image_url
 all_websites = {}       # slug → website_url
+all_rejections = {}     # slug → rejection_reason
 batch_files = sorted(glob.glob('seed_data/temp/batch_*.json'))
 
 for batch_file in batch_files:
@@ -282,17 +389,35 @@ for batch_file in batch_files:
         checkpoint = json.load(f)
         all_validated.update(checkpoint.get('validated', {}))
         all_websites.update(checkpoint.get('websites_found', {}))
+        all_rejections.update(checkpoint.get('rejection_notes', {}))
 
-# 3. Build final validated list by merging
+# 3. Build validated and rejected lists
 validated = []
+rejected = []
+
 for slug, image_url in all_validated.items():
-    if not image_url:  # Skip rejected (null)
-        continue
     if slug not in discovered:
         print(f"Warning: {slug} not in discovered.json, skipping")
         continue
 
     obs = discovered[slug]
+
+    if not image_url:  # Rejected (null) - collect for challenge skill
+        # Keep same format as discovered.json, add rejection_reason
+        entry = {
+            "wikidata_id": obs.get("wikidata_id"),
+            "slug": slug,
+            "name": obs["name"],
+            "latitude": obs["latitude"],
+            "longitude": obs["longitude"],
+            "image_url": obs.get("image_url"),  # Original rejected image
+            "rejection_reason": all_rejections.get(slug, "No valid image found")
+        }
+        if obs.get("type_metadata"):
+            entry["type_metadata"] = obs["type_metadata"]
+        rejected.append(entry)
+        continue
+
     entry = {
         "name": obs["name"],
         "latitude": obs["latitude"],
@@ -310,12 +435,20 @@ for slug, image_url in all_validated.items():
     validated.append(entry)
 
 print(f"Validated {len(validated)} observatories from {len(batch_files)} batches")
+if rejected:
+    print(f"Rejected {len(rejected)} observatories (no valid image)")
 
 # 4. Merge into validated_observatories.json
 path, total_count, added_count = merge_validated_observatories(validated)
 print(f"Added {added_count} new, total now {total_count}")
 
-# 5. Clean up temp directory
+# 5. Write rejected_observatories.json (for challenge skill)
+if rejected:
+    with open('seed_data/rejected_observatories.json', 'w') as f:
+        json.dump({"observatories": rejected}, f, indent=2)
+    print(f"Wrote {len(rejected)} rejected observatories to seed_data/rejected_observatories.json")
+
+# 6. Clean up temp directory
 for batch_file in batch_files:
     os.remove(batch_file)
 os.remove('seed_data/temp/discovered.json')

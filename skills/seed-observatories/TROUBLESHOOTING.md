@@ -4,6 +4,73 @@ Common issues and solutions for the seed-observatories skill.
 
 ---
 
+## Self-installation failed
+
+**Symptom:** Step 0 reports "Installation failed" with pip errors.
+
+**Common causes:**
+1. No write permissions to site-packages
+2. Missing pip in the Python environment
+3. Network issues downloading dependencies
+
+**Fixes:**
+```bash
+# Check which Python is being used
+which python
+
+# Try manual installation
+python -m pip install -e .claude/skills/seed-observatories/
+
+# If permission error, check you're in a virtual environment
+python -c "import sys; print(sys.prefix)"
+```
+
+---
+
+## "ModuleNotFoundError: observatory_seeder"
+
+**Symptom:** Import fails even after Step 0 says installation succeeded.
+
+**Cause:** Python session needs restart after pip install, or wrong Python being used.
+
+**Fixes:**
+1. The skill should work - pip install was in-process
+2. If running manually, ensure you use the same Python:
+   ```bash
+   # Check where it's installed
+   pip show observatory-seeder
+
+   # Use that Python
+   djvenv/bin/python -c "from observatory_seeder import merge_validated_observatories"
+   ```
+
+---
+
+## No virtual environment found
+
+**Symptom:** Skill installs to system Python, causing permission errors.
+
+**The skill auto-detects virtual environments in this order:**
+
+1. `VIRTUAL_ENV` environment variable (already activated venv)
+2. Common directory names in current directory:
+   - `djvenv/` (Django convention)
+   - `.venv/` (Python default)
+   - `venv/`
+   - `env/`
+   - `.env/` (if it's a directory, not a file)
+   - `virtualenv/`
+3. Search upward (max 5 levels) for any of the above
+4. Fall back to `sys.executable`
+
+**If no venv exists**, create one first:
+```bash
+python -m venv .venv
+.venv/bin/pip install -e .claude/skills/seed-observatories/
+```
+
+---
+
 ## Sub-agent uses different output format
 
 **Symptom:** Checkpoint has unexpected structure (e.g., `image_status` instead of `validated`, array instead of object).

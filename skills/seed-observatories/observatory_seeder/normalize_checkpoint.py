@@ -21,7 +21,8 @@ def normalize_checkpoint(data, expected_batch_num):
     {
         "batch_num": N,
         "validated": { "slug": "url" or null },
-        "websites_found": { "slug": "url" }
+        "websites_found": { "slug": "url" },
+        "rejection_notes": { "slug": "reason" }
     }
 
     Handles these input formats:
@@ -32,13 +33,15 @@ def normalize_checkpoint(data, expected_batch_num):
     normalized = {
         "batch_num": expected_batch_num,
         "validated": {},
-        "websites_found": {}
+        "websites_found": {},
+        "rejection_notes": {}
     }
 
     # Already canonical format
     if isinstance(data, dict) and "validated" in data and isinstance(data["validated"], dict):
         normalized["validated"] = data["validated"]
         normalized["websites_found"] = data.get("websites_found", {})
+        normalized["rejection_notes"] = data.get("rejection_notes", {})
         return normalized
 
     # Old format: {"batch_num": N, "results": [...]}
@@ -51,6 +54,9 @@ def normalize_checkpoint(data, expected_batch_num):
             final_url = item.get("final_url") or item.get("image_url") or item.get("url")
             if item.get("accepted") == False or item.get("image_status") == "rejected":
                 final_url = None
+                # Capture rejection reason if available
+                if item.get("rejection_reason") or item.get("reason"):
+                    normalized["rejection_notes"][slug] = item.get("rejection_reason") or item.get("reason")
             normalized["validated"][slug] = final_url
             # Check for website additions
             if item.get("type_metadata", {}).get("website"):
@@ -71,6 +77,9 @@ def normalize_checkpoint(data, expected_batch_num):
             )
             final_url = item.get("image_url") if is_accepted else None
             normalized["validated"][slug] = final_url
+            # Capture rejection reason if rejected
+            if not is_accepted and (item.get("rejection_reason") or item.get("reason")):
+                normalized["rejection_notes"][slug] = item.get("rejection_reason") or item.get("reason")
             # Check for website
             if item.get("type_metadata", {}).get("website"):
                 normalized["websites_found"][slug] = item["type_metadata"]["website"]
@@ -101,4 +110,8 @@ if __name__ == "__main__":
     batch_num = int(sys.argv[2])
 
     result = normalize_file(checkpoint_path, batch_num)
-    print(f"Normalized: {len(result['validated'])} observatories, {len(result['websites_found'])} websites found")
+    rejected_count = len(result.get('rejection_notes', {}))
+    msg = f"Normalized: {len(result['validated'])} observatories, {len(result['websites_found'])} websites found"
+    if rejected_count:
+        msg += f", {rejected_count} rejection notes"
+    print(msg)

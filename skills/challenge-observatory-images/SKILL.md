@@ -86,7 +86,56 @@ Before running the pipeline, verify the `observatory_seeder` package is installe
 ```python
 import subprocess
 import sys
+import os
 from pathlib import Path
+
+def find_virtualenv():
+    """
+    Find a Python virtual environment.
+
+    Detection order:
+    1. VIRTUAL_ENV environment variable (already activated)
+    2. Common venv directory names in current directory
+    3. Search upward for venv directories
+    4. Fall back to sys.executable
+    """
+    # 1. Check if a venv is already activated
+    if os.environ.get("VIRTUAL_ENV"):
+        venv_python = Path(os.environ["VIRTUAL_ENV"]) / "bin" / "python"
+        if venv_python.exists():
+            return str(venv_python)
+
+    # 2. Common virtual environment directory names (in priority order)
+    venv_names = [
+        "djvenv",      # Django convention
+        ".venv",       # Python default / common
+        "venv",        # Python default
+        "env",         # Common shorthand
+        ".env",        # Hidden variant (check it's a dir, not dotenv file)
+        "virtualenv",  # Explicit name
+    ]
+
+    # Check current directory first
+    cwd = Path.cwd()
+    for name in venv_names:
+        venv_path = cwd / name / "bin" / "python"
+        if venv_path.exists():
+            return str(venv_path)
+
+    # 3. Search upward (max 5 levels) for project root with venv
+    search_dir = cwd
+    for _ in range(5):
+        for name in venv_names:
+            venv_path = search_dir / name / "bin" / "python"
+            if venv_path.exists():
+                return str(venv_path)
+        parent = search_dir.parent
+        if parent == search_dir:
+            break
+        search_dir = parent
+
+    # 4. Fall back to current Python
+    return sys.executable
 
 def ensure_observatory_seeder():
     """Install observatory_seeder if not available."""
@@ -103,11 +152,9 @@ def ensure_observatory_seeder():
             print("ERROR: Skill directory not found at .claude/skills/seed-observatories/")
             return False
 
-        # Find Python executable - prefer djvenv, fall back to current
-        if Path("djvenv/bin/python").exists():
-            python = "djvenv/bin/python"
-        else:
-            python = sys.executable
+        # Find Python executable
+        python = find_virtualenv()
+        print(f"Using Python: {python}")
 
         # Install the package
         result = subprocess.run(
