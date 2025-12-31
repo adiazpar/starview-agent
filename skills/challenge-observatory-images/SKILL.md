@@ -28,15 +28,20 @@ Parse from user input:
 - `--limit N` or just a number: How many rejected observatories to challenge (default: all)
 - `--offset N`: Skip first N rejected observatories
 
-## Batch Limits
+## Processing Approach
 
-| Limit | Approach | Why Smaller |
-|-------|----------|-------------|
-| 1-8 | Single sub-agent | Deep research is intensive |
-| 9-25 | Orchestrated | Multiple sub-agents, 5-8 each |
-| 26+ | Multi-session | Split across sessions |
+**1 observatory = 1 sub-agent** (using Haiku model)
 
-**Smaller batches than seed-observatories** because web research requires multiple searches per observatory.
+| Count | Approach |
+|-------|----------|
+| 1-50 | Sequential Haiku sub-agents |
+| 51+ | Multi-session (split across sessions) |
+
+**Why 1-per-agent?**
+- Prevents image context accumulation that causes API failures
+- Each agent stays well under token limits
+- If one fails, others still succeed
+- Haiku is fast and sufficient for image validation
 
 ## Architecture: Manager + Sub-Agents
 
@@ -44,34 +49,37 @@ Parse from user input:
 ┌─────────────────────────────────────────────────────────────┐
 │  MANAGER (main session)                                     │
 │  - Loads rejected_observatories.json                        │
-│  - Spawns research sub-agents (sequentially)                │
+│  - Spawns 1 Haiku sub-agent per observatory (sequentially)  │
 │  - Reads checkpoint files from sub-agents                   │
-│  - Builds challenged_observatories.json                     │
+│  - Consolidates results into challenged_observatories.json  │
 │                                                             │
-│  ⚡ Manager NEVER performs web research - only orchestrates │
+│  ⚡ Manager orchestrates - sub-agents do the research       │
 └─────────────────────────────────────────────────────────────┘
          │
-         ├──► Sub-Agent 1 → writes temp/challenge_batch_001.json
-         ├──► Sub-Agent 2 → writes temp/challenge_batch_002.json
-         └──► Sub-Agent 3 → writes temp/challenge_batch_003.json
+         ├──► Haiku Agent 1 (Observatory A) → challenge_001.json
+         ├──► Haiku Agent 2 (Observatory B) → challenge_002.json
+         ├──► Haiku Agent 3 (Observatory C) → challenge_003.json
+         └──► ... (1 agent per observatory)
 ```
+
+**Key design choice:** Each sub-agent only handles ONE observatory, keeping image context minimal and preventing API failures from accumulated screenshots.
 
 ## File Locations
 
 | File | Purpose |
 |------|---------|
 | `seed_data/rejected_observatories.json` | Input: observatories rejected by seed-observatories |
-| `seed_data/temp/challenge_batch_NNN.json` | Checkpoint: research results from sub-agent N |
-| `seed_data/challenged_observatories.json` | Output: results for manual review |
+| `seed_data/temp/challenge_NNN.json` | Checkpoint: result from sub-agent N (1 observatory each) |
+| `seed_data/challenged_observatories.json` | Output: confirmed rejected (no images exist) |
 
 ## ⚠️ CRITICAL RULES FOR MANAGER
 
 | Rule | Why |
 |------|-----|
-| **NEVER write to `challenge_batch_*.json`** | Only sub-agents write checkpoints |
-| **NEVER perform web searches directly** | Delegate all research to sub-agents |
-| **Prefix checkpoints with `challenge_`** | Avoid collision with seed-observatories batch files |
-| **3-image consensus required** | Ensures we find the RIGHT observatory, not just any image |
+| **NEVER write to `challenge_*.json`** | Only sub-agents write checkpoints |
+| **Use `model: "haiku"` for sub-agents** | Cheaper, faster, sufficient for this task |
+| **Process sequentially, not parallel** | Avoids browser conflicts with Chrome DevTools |
+| **2+ confirming images to accept** | Relaxed from 3 for better amateur observatory coverage |
 
 ## Execution Steps
 
@@ -190,7 +198,7 @@ import json
 from pathlib import Path
 
 # Check for checkpoint files from previous run (crashed mid-challenge)
-existing_batches = sorted(glob.glob('seed_data/temp/challenge_batch_*.json'))
+existing_checkpoints = sorted(glob.glob('seed_data/temp/challenge_*.json'))
 
 # Check for confirmed_rejected (observatories we already tried and failed - don't retry)
 confirmed_rejected_slugs = set()
@@ -203,16 +211,16 @@ if challenged_file.exists():
     if confirmed_rejected_slugs:
         print(f"Found {len(confirmed_rejected_slugs)} confirmed rejected (will skip)")
 
-if existing_batches:
-    print(f"Found {len(existing_batches)} checkpoint files from previous run")
+if existing_checkpoints:
+    print(f"Found {len(existing_checkpoints)} checkpoint files from previous run")
     # Ask user: resume or start fresh?
 ```
 
-If resuming, skip to Step 3 and continue from the next batch number.
+If resuming, skip to Step 3 and continue from the next checkpoint number.
 
 If starting fresh, clear old checkpoints:
 ```bash
-rm -f seed_data/temp/challenge_batch_*.json
+rm -f seed_data/temp/challenge_*.json
 ```
 
 ---
@@ -241,7 +249,6 @@ if len(observatories) < len(all_rejected):
     print(f"Remaining to challenge: {len(observatories)}")
 
 # Apply --limit and --offset if provided
-# Split into batches of 5-8 each
 ```
 
 If no observatories remain to challenge, exit early with a success message.
@@ -250,146 +257,126 @@ If no observatories remain to challenge, exit early with a success message.
 
 ### Step 3: Web Research via Sub-Agents
 
-Split observatories into batches of 5-8 each. Spawn sub-agents **sequentially**.
+For each observatory, spawn a **Haiku sub-agent** to do the research. Process **sequentially** (not parallel) to avoid browser conflicts.
 
-**For each batch, use this prompt template:**
+```python
+for idx, obs in enumerate(observatories):
+    agent_num = idx + 1
+    # Spawn Task with model="haiku" - see prompt template below
+```
+
+**For each observatory, use this prompt template:**
 
 ---
 
-#### SUB-AGENT PROMPT TEMPLATE
+#### SUB-AGENT PROMPT TEMPLATE (1 observatory)
 
 ````
-OBSERVATORY IMAGE CHALLENGER - Batch {batch_num}
+OBSERVATORY IMAGE CHALLENGER - #{agent_num}: {name}
 
-GOAL: Find valid images for rejected observatories through deep web research.
-REQUIREMENT: 3+ confirming images from DIFFERENT sources to accept.
+GOAL: Find a valid facility image for this rejected observatory.
+REQUIREMENT: 2+ confirming images from DIFFERENT sources to accept.
 
-INPUT (research each):
-{batch_json}
+OBSERVATORY:
+- Name: {name}
+- Slug: {slug}
+- Location: {latitude}, {longitude}
+- Website: {website if exists}
+- Rejection reason: {rejection_reason}
 
-RESEARCH WORKFLOW for each observatory:
+RESEARCH WORKFLOW:
 
-1. WEB SEARCH - Run multiple searches:
-   - WebSearch: "{name} observatory photos"
-   - WebSearch: "{name} telescope building"
-   - WebSearch: "{name} dome exterior"
-   - WebSearch: "{name} astronomical observatory"
+1. WEB SEARCH - Run 2-3 searches:
+   - WebSearch: "{name} observatory building photos"
+   - WebSearch: "{name} telescope dome"
+   - If website exists, check it for photos
 
-2. COLLECT CANDIDATES - From search results, identify 5-8 promising image URLs:
-   - News articles with photos
-   - Tourism/travel sites
-   - University/institution pages
-   - Astronomy community sites
-   - Flickr, photo hosting sites
+2. VALIDATE CANDIDATES (up to 5):
+   For each promising URL:
+   a. mcp__chrome-devtools__new_page(url)
+   b. mcp__chrome-devtools__resize_page(width=800, height=600)
+   c. mcp__chrome-devtools__take_screenshot()
+   d. Does this show observatory buildings, domes, or telescope facilities?
+   e. mcp__chrome-devtools__close_page()
 
-3. VALIDATE EACH CANDIDATE (up to 8):
-   For each candidate URL:
-   a. Navigate with Chrome DevTools: mcp__chrome-devtools__new_page
-   b. Take screenshot: mcp__chrome-devtools__take_screenshot
-   c. Vision analysis - answer these questions:
-      - Does this image show observatory buildings, domes, or telescope facilities?
-      - Can you confirm this is specifically "{name}"?
-      - Describe what the image shows (e.g., "Main dome from southeast", "Aerial view of facility")
-   d. Record result: {url, confidence: "high"/"medium"/"low", description}
-   e. CLOSE PAGE before next: mcp__chrome-devtools__close_page
+3. DECISION:
+   - If 2+ images show the SAME facility → "accepted"
+   - Otherwise → "rejected" with reason
 
-4. CONSENSUS CHECK:
-   - If 3+ images with "high" or "medium" confidence showing SAME FACILITY:
-     → Status: "accepted"
-     → Select best quality image as primary (see IMAGE SELECTION PRIORITY below)
-     → Include all confirming images as evidence
-   - If fewer than 3 confirming images:
-     → Status: "rejected"
-     → Record reason and candidates checked
+IMAGE SELECTION: Prefer actual photos over renderings, clean images without text overlays.
 
-5. IMAGE SELECTION PRIORITY (for choosing primary image):
-   When multiple valid images exist, prefer in this order:
-   1. **Actual photographs** of the real facility (aerial photos, ground-level shots)
-   2. **Clean images without text overlays** - no watermarks, logos, or edited text
-   3. **High resolution** - larger images that show detail
-   4. **Exterior shots** showing the full facility, domes, or telescope buildings
-
-   AVOID as primary image:
-   - Architectural renderings with text/labels overlaid
-   - Images with "INTERNATIONAL..." or facility names edited onto them
-   - Marketing materials with heavy graphic design elements
-   - Low-resolution thumbnails
-
-   If the best consensus image has text overlays, check if a cleaner version exists
-   from the same source or other validated sources.
-
-IMPORTANT:
-- Only ONE browser page open at a time
-- Close each page before opening the next
-- "Same facility" means clearly the same observatory complex, even if different buildings/angles
-- Extract actual image URLs (not page URLs) using evaluate_script when needed
-
-OUTPUT - Write to seed_data/temp/challenge_batch_{batch_num:03d}.json:
+OUTPUT - Write to seed_data/temp/challenge_{agent_num:03d}.json:
 
 ```python
 import json
 output = {
-    "batch_num": {batch_num},
-    "results": {
-        "observatory-slug-1": {
-            "status": "accepted",
-            "image_url": "https://best-quality-image.jpg",
-            "evidence": [
-                {"url": "https://...", "confidence": "high", "description": "Main dome from north"},
-                {"url": "https://...", "confidence": "high", "description": "Aerial view of facility"},
-                {"url": "https://...", "confidence": "medium", "description": "Telescope housing interior"}
-            ]
-        },
-        "observatory-slug-2": {
-            "status": "rejected",
-            "reason": "Only 1 confirming image found",
-            "candidates_checked": 6
-        }
-    }
+    "agent_num": {agent_num},
+    "slug": "{slug}",
+    "status": "accepted",  # or "rejected"
+    "image_url": "https://best-image.jpg",  # if accepted
+    "evidence": [
+        {"url": "...", "confidence": "high", "description": "..."}
+    ],  # if accepted
+    "reason": "...",  # if rejected
+    "candidates_checked": 4
 }
-with open("seed_data/temp/challenge_batch_{batch_num:03d}.json", "w") as f:
+with open("seed_data/temp/challenge_{agent_num:03d}.json", "w") as f:
     json.dump(output, f, indent=2)
+print(f"Wrote checkpoint for {slug}")
 ```
 ````
 
 ---
 
-After each sub-agent returns, verify the checkpoint file was created:
+**Task tool invocation:**
+
+```python
+Task(
+    description=f"Challenge observatory {agent_num}",
+    prompt=prompt_from_template_above,
+    subagent_type="general-purpose",
+    model="haiku"  # Use Haiku for cost efficiency
+)
+```
+
+After each sub-agent returns, verify the checkpoint:
 
 ```python
 import os
-checkpoint = f'seed_data/temp/challenge_batch_{batch_num:03d}.json'
+checkpoint = f'seed_data/temp/challenge_{agent_num:03d}.json'
 if not os.path.exists(checkpoint):
     print(f"WARNING: Sub-agent did not create {checkpoint}")
-    # May need to re-run this batch
+    # May need to re-run this observatory
 ```
 
-Then continue to the next batch.
+Then continue to the next observatory.
 
 ---
 
 ### Step 4: Consolidate Checkpoints
 
-After all batches complete, merge checkpoints into final output:
+After all sub-agents complete, merge checkpoints into final output:
 
 ```python
 import json
 import glob
-from datetime import datetime
+import os
 
 # 1. Load rejected observatories (has metadata)
 with open('seed_data/rejected_observatories.json') as f:
     rejected_data = json.load(f)
     rejected_by_slug = {obs['slug']: obs for obs in rejected_data['observatories']}
 
-# 2. Collect all research results from checkpoints
+# 2. Collect all research results from checkpoints (1 per file now)
 all_results = {}
-batch_files = sorted(glob.glob('seed_data/temp/challenge_batch_*.json'))
+checkpoint_files = sorted(glob.glob('seed_data/temp/challenge_*.json'))
 
-for batch_file in batch_files:
-    with open(batch_file) as f:
+for checkpoint_file in checkpoint_files:
+    with open(checkpoint_file) as f:
         checkpoint = json.load(f)
-        all_results.update(checkpoint.get('results', {}))
+        slug = checkpoint.get('slug')
+        if slug:
+            all_results[slug] = checkpoint
 
 # 3. Build output structure
 challenged_accepted = []
@@ -483,8 +470,8 @@ elif os.path.exists('seed_data/challenged_observatories.json'):
     print("All challenges successful - deleted challenged_observatories.json")
 
 # 7. Clean up checkpoint files
-for batch_file in batch_files:
-    os.remove(batch_file)
+for checkpoint_file in checkpoint_files:
+    os.remove(checkpoint_file)
 print("Checkpoint files cleaned up")
 ```
 
@@ -527,23 +514,24 @@ Results:
 
 ## Validation Criteria
 
-**3-IMAGE CONSENSUS REQUIRED** - This is stricter than seed-observatories:
+**2-IMAGE CONSENSUS** - Relaxed from 3 to improve amateur observatory coverage:
 
 | Criterion | Why |
 |-----------|-----|
-| 3+ confirming images | Prevents false positives from similar-named observatories |
+| 2+ confirming images | Balances accuracy with coverage for smaller observatories |
 | "Same facility" check | Images must show the same physical complex |
 | Multiple sources preferred | Cross-validates the identification |
 
-**ACCEPT** when 3+ images show:
+**ACCEPT** when 2+ images show:
 - Same observatory buildings/domes from different angles
 - Different buildings clearly part of the same facility
 - Consistent architectural style and surroundings
 
 **REJECT** when:
-- Fewer than 3 confirming images found
+- Fewer than 2 confirming images found
 - Images show different observatories with similar names
 - Only diagrams, maps, or logos found
+- Entry is not actually an astronomical observatory (e.g., town, institute, tide gauge)
 
 ### Image Quality Standards
 
@@ -570,9 +558,9 @@ If session crashes mid-research, just run the skill again:
 ```
 
 The skill automatically:
-1. Detects existing `challenge_batch_*.json` files
+1. Detects existing `challenge_*.json` checkpoint files
 2. Asks whether to resume or start fresh
-3. If resuming, continues from the next batch
+3. If resuming, skips observatories that already have checkpoints
 4. Merges all checkpoints when complete
 
 ---

@@ -78,14 +78,14 @@ claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
 
 ## Too Few Confirming Images
 
-**Symptom:** Observatory marked rejected with "Only N confirming image(s) found"
+**Symptom:** Observatory marked rejected with "Only 1 confirming image found"
 
-**Cause:** 3-image consensus requirement not met
+**Cause:** 2-image consensus requirement not met
 
 **Options:**
 1. **Accept the rejection** - some observatories truly lack online imagery
 2. **Manual research** - you can manually find and add images
-3. **Lower threshold** - if you trust 2 images, manually add to validated_observatories.json
+3. **Lower threshold** - if you trust 1 image, manually add to validated_observatories.json
 
 ---
 
@@ -113,8 +113,8 @@ claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
 
 **Fixes:**
 1. Wait 5-10 minutes and retry
-2. Use smaller batch sizes (3-5 instead of 5-8)
-3. Spread research across multiple sessions
+2. Spread research across multiple sessions
+3. The 1-per-agent approach already minimizes concurrent searches
 
 ---
 
@@ -160,25 +160,25 @@ claude mcp add chrome-devtools npx chrome-devtools-mcp@latest
 **Fix:** Check the checkpoint file structure:
 ```python
 import json
-with open('seed_data/temp/challenge_batch_001.json') as f:
+with open('seed_data/temp/challenge_001.json') as f:
     data = json.load(f)
 print(json.dumps(data, indent=2))
 ```
 
-Expected structure:
+Expected structure (1 observatory per file):
 ```json
 {
-  "batch_num": 1,
-  "results": {
-    "slug": {
-      "status": "accepted|rejected",
-      ...
-    }
-  }
+  "agent_num": 1,
+  "slug": "observatory-slug-here",
+  "status": "accepted|rejected",
+  "image_url": "https://...",
+  "evidence": [...],
+  "reason": "...",
+  "candidates_checked": 4
 }
 ```
 
-If format differs, manually convert or re-run the batch.
+If format differs, manually convert or re-run that observatory.
 
 ---
 
