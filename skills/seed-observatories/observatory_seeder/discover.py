@@ -221,22 +221,18 @@ def discover_observatories(
     SELECT DISTINCT ?observatory ?observatoryLabel ?coord ?image ?countryLabel ?elevation ?website ?phone WHERE {{
       ?observatory wdt:P31/wdt:P279* wd:Q62832 .  # instance of astronomical observatory
       ?observatory wdt:P625 ?coord .               # has coordinates
-      ?observatory rdfs:label ?observatoryLabel .
-      FILTER(LANG(?observatoryLabel) = "en")
 
       OPTIONAL {{ ?observatory wdt:P18 ?image }}
-      OPTIONAL {{
-        ?observatory wdt:P17 ?country .
-        ?country rdfs:label ?countryLabel .
-        FILTER(LANG(?countryLabel) = "en")
-      }}
+      OPTIONAL {{ ?observatory wdt:P17 ?country }}
       OPTIONAL {{ ?observatory wdt:P2044 ?elevation }}
       OPTIONAL {{ ?observatory wdt:P856 ?website }}
       OPTIONAL {{ ?observatory wdt:P1329 ?phone }}
 
       {filter_clause}
+
+      SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en,es,fr,de,it,pt,ja,zh,ko,ru,ar,nl,pl,cs,sv,uk,tr,he,id,vi". }}
     }}
-    ORDER BY DESC(?elevation)
+    ORDER BY ?observatoryLabel
     LIMIT {limit}
     OFFSET {offset}
     """
@@ -270,10 +266,14 @@ def discover_observatories(
         uri = r.get('observatory', {}).get('value', '')
         wikidata_id = uri.split('/')[-1] if uri else ''
 
+        # Get name - skip if wikibase:label fell back to Q-ID (no label in any language)
+        name = r.get('observatoryLabel', {}).get('value', '')
+        if not name or re.match(r'^Q\d+$', name):
+            continue
+
         # Parse and normalize elevation
         elev_str = r.get('elevation', {}).get('value')
         raw_elevation = float(elev_str) if elev_str else None
-        name = r.get('observatoryLabel', {}).get('value', 'Unknown')
         elevation, elevation_note = normalize_elevation(raw_elevation, name)
 
         obs = Observatory(
