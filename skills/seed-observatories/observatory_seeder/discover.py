@@ -260,7 +260,8 @@ def discover_observatories(
             continue
 
         parts = coord[6:-1].split()
-        lon, lat = round(float(parts[0]), 3), round(float(parts[1]), 3)
+        # Preserve full precision from Wikidata - truncation only for comparisons
+        lon, lat = float(parts[0]), float(parts[1])
 
         # Extract Wikidata ID from URI
         uri = r.get('observatory', {}).get('value', '')
