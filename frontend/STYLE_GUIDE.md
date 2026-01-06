@@ -1,7 +1,7 @@
 # Starview Frontend Style Guide
 
-**Last Updated:** 2025-12-29
-**Design System:** Linear-inspired glass-morphism
+**Last Updated:** 2026-01-06
+**Design System:** Observatory-themed glass-morphism (cyan/teal accent)
 **Source of Truth:** `starview_frontend/src/styles/global.css`
 
 ---
@@ -11,49 +11,145 @@
 | Need | Use This |
 |------|----------|
 | Card with blur effect | `.glass-card` |
+| Clickable card | `.glass-card .glass-card--interactive` |
 | Auth page layout | `.auth-page`, `.auth-page__content`, `.auth-page__card` |
 | Primary button | `.btn-primary` |
 | Secondary button | `.btn-secondary` |
+| Danger button | `.btn-danger` |
+| Social login button | `.btn-social` |
 | Icon-only button | `.btn-icon` |
 | Form input | `.form-input` |
+| Form textarea | `.form-textarea` |
 | Form group | `.form-group` + `.form-label` |
+| Checkbox | `.form-checkbox` |
 | Empty state | `.empty-state`, `.empty-state__icon`, `.empty-state__title` |
 | Password toggle | `.password-toggle` |
+| Section divider | `.section-divider` |
 | Loading spinner | `<LoadingSpinner />` component |
+| Toast notification | `useToast()` hook from `ToastContext` |
 
 ---
 
 ## Design Tokens
 
-### Colors
+### Colors (Dark Theme - Default)
 
 ```css
-/* Background */
---bg-base: #111827;              /* Main background */
---glass-bg: rgba(255,255,255,0.02);      /* Card backgrounds */
---glass-bg-hover: rgba(255,255,255,0.04);
+/* Background - Deep space observatory */
+--bg-base: #0a0f1a;                           /* Main background */
+--bg-elevated: #0d1320;                       /* Elevated surfaces */
+--starfield-gradient: linear-gradient(to top, transparent 0%, #080c14 20%, #0a0f1a 100%);
+--navbar-bg: hsla(220, 40%, 8%, 0.85);        /* Navbar backdrop */
+
+/* Text - High contrast for readability */
+--text-primary: #f0f4f8;                      /* Main text */
+--text-secondary: #94a3b8;                    /* Secondary text */
+--text-muted: #64748b;                        /* Muted/hint text */
+
+/* Accent (Cyan/Teal - Observatory instrument glow) */
+--accent: #00d4aa;
+--accent-hover: #00e4b8;
+--accent-light: #5eead4;
+--accent-bg: rgba(0, 212, 170, 0.1);
+--accent-border: rgba(0, 212, 170, 0.25);
+
+/* Status Colors - Instrument readouts */
+--success: #22c55e;
+--success-bg: rgba(34, 197, 94, 0.1);
+--success-border: rgba(34, 197, 94, 0.3);
+--warning: #f59e0b;
+--warning-bg: rgba(245, 158, 11, 0.1);
+--warning-border: rgba(245, 158, 11, 0.3);
+--error: #ef4444;
+--error-bg: rgba(239, 68, 68, 0.1);
+--error-border: rgba(239, 68, 68, 0.3);
+--info: #06b6d4;
+--info-bg: rgba(6, 182, 212, 0.1);
+--info-border: rgba(6, 182, 212, 0.3);
+
+/* Stars & Favorites */
+--star-filled: #fbbf24;
+--star-empty: #334155;
+--favorite: #ec4899;
+--favorite-hover: #db2777;
+
+/* Elevation indicator */
+--elevation: #f87171;
+
+/* Borders - Subtle instrument panel lines */
+--border: #1e293b;
+--border-focus: #00d4aa;
+
+/* Glass Card - Instrument panel surfaces */
+--glass-bg: rgba(15, 23, 42, 0.6);
+--glass-bg-hover: rgba(15, 23, 42, 0.8);
+--glass-border: rgba(0, 212, 170, 0.08);
+--glass-border-hover: rgba(0, 212, 170, 0.15);
+
+/* Decorative - Cyan glow effects */
+--glow-primary: rgba(0, 212, 170, 0.2);
+--glow-secondary: rgba(6, 182, 212, 0.1);
+--gradient-accent: linear-gradient(135deg, #00d4aa 0%, #06b6d4 100%);
+--shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+--shadow-accent: 0 0 20px rgba(0, 212, 170, 0.3), 0 0 40px rgba(0, 212, 170, 0.1);
+--shadow-accent-hover: 0 0 30px rgba(0, 212, 170, 0.4), 0 0 60px rgba(0, 212, 170, 0.15);
+
+/* Overlay */
+--overlay-bg: rgba(0, 0, 0, 0.6);
+
+/* Pinned Badge Glow */
+--pinned-badge-glow: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
+--pinned-badge-glow-hover: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
+```
+
+### Colors (Light Theme)
+
+Applied via `[data-theme="light"]` selector:
+
+```css
+/* Background - Clean twilight observatory */
+--bg-base: #f8fafc;
+--bg-elevated: #ffffff;
+--starfield-gradient: linear-gradient(to bottom, #ffffff 0%, #f1f5f9 50%, #e2e8f0 100%);
+--navbar-bg: rgba(255, 255, 255, 0.92);
 
 /* Text */
---text-primary: #f9fafb;         /* Main text */
---text-secondary: #d1d5db;       /* Secondary text */
---text-muted: #9ca3af;           /* Muted/hint text */
+--text-primary: #0f172a;
+--text-secondary: #475569;
+--text-muted: #64748b;
 
-/* Accent (Blue in dark mode, Orange in light) */
---accent: #2563eb;
---accent-hover: #3b82f6;
---accent-light: #60a5fa;
---accent-border: rgba(37, 99, 235, 0.2);
-
-/* Status */
---success: #22c55e;
---warning: #eab308;
---error: #ef4444;
---info: #0ea5e9;
+/* Accent (Deep indigo - twilight sky) */
+--accent: #4f46e5;
+--accent-hover: #4338ca;
+--accent-light: #818cf8;
+--accent-bg: rgba(79, 70, 229, 0.08);
+--accent-border: rgba(79, 70, 229, 0.2);
 
 /* Borders */
---border: #2f353e;
---glass-border: rgba(255,255,255,0.06);
---glass-border-hover: rgba(255,255,255,0.1);
+--border: #e2e8f0;
+--border-focus: #4f46e5;
+--star-empty: #cbd5e1;
+
+/* Glass Card - Frosted panel surfaces */
+--glass-bg: rgba(255, 255, 255, 0.7);
+--glass-bg-hover: rgba(255, 255, 255, 0.9);
+--glass-border: rgba(15, 23, 42, 0.08);
+--glass-border-hover: rgba(15, 23, 42, 0.12);
+
+/* Decorative - Twilight glow effects */
+--glow-primary: rgba(79, 70, 229, 0.12);
+--glow-secondary: rgba(99, 102, 241, 0.06);
+--gradient-accent: linear-gradient(135deg, #818cf8 0%, #4f46e5 100%);
+--shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+--shadow-accent: 0 4px 20px rgba(79, 70, 229, 0.2);
+--shadow-accent-hover: 0 6px 28px rgba(79, 70, 229, 0.28);
+
+/* Overlay */
+--overlay-bg: rgba(15, 23, 42, 0.5);
+
+/* Pinned Badge Glow - Darker for light mode */
+--pinned-badge-glow: drop-shadow(0 0 4px rgba(0, 0, 0, 0.2));
+--pinned-badge-glow-hover: drop-shadow(0 0 6px rgba(0, 0, 0, 0.3));
 ```
 
 ### Spacing
@@ -83,6 +179,13 @@ margin-bottom: 24px;
 ### Typography
 
 ```css
+/* Font Families */
+--font-family: 'Karla', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;  /* Body text */
+--font-display: 'Outfit', 'Montserrat', sans-serif;  /* Headings */
+--font-technical: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;  /* Data displays */
+
+/* Font Sizes */
+--text-2xs: 10px;
 --text-xs: 12px;
 --text-label: 13px;    /* Form labels, small UI text */
 --text-sm: 14px;
@@ -93,8 +196,13 @@ margin-bottom: 24px;
 --text-3xl: 28px;
 --text-4xl: 36px;
 
---font-family: 'Karla', sans-serif;      /* Body text */
---font-display: 'Montserrat', sans-serif; /* Headings */
+/* Line Heights */
+--leading-tight: 1.25;
+--leading-normal: 1.5;
+
+/* Font Weights */
+--font-medium: 500;
+--font-semibold: 600;
 ```
 
 ### Border Radius
@@ -104,10 +212,31 @@ margin-bottom: 24px;
 --radius-full: 9999px;
 
 /* Common patterns */
-border-radius: var(--radius);                    /* Default */
+border-radius: var(--radius);                    /* Default - 8px */
 border-radius: calc(var(--radius) * 1.5);        /* 12px - cards */
 border-radius: calc(var(--radius) * 2);          /* 16px - large cards */
 border-radius: calc(var(--radius) / 2);          /* 4px - small elements */
+border-radius: var(--radius-full);               /* Pills, circles */
+```
+
+### Transitions & Z-Index
+
+```css
+/* Transition Duration */
+--transition: 0.15s;
+
+/* Z-Index Scale */
+--z-navbar: 30;
+--z-modal: 50;
+```
+
+### Layout
+
+```css
+--navbar-height: 72px;
+--navbar-height-mobile: 64px;
+--navbar-filters-height: 58px;
+--container-max: 1000px;
 ```
 
 ### Badge Colors
@@ -121,6 +250,11 @@ border-radius: calc(var(--radius) / 2);          /* 4px - small elements */
 --tier-elite: hsl(23, 100%, 50%);
 --tier-purple: hsl(271, 91%, 65%);
 
+/* Tier Glow Colors (for box-shadow) */
+--tier-diamond-glow: hsla(191, 100%, 86%, 0.4);
+--tier-elite-glow: hsla(23, 100%, 50%, 0.4);
+--tier-purple-glow: hsla(271, 91%, 65%, 0.4);
+
 /* Category Colors */
 --category-exploration: #3b82f6;
 --category-contribution: #10b981;
@@ -129,6 +263,15 @@ border-radius: calc(var(--radius) / 2);          /* 4px - small elements */
 --category-community: #f97316;
 --category-special: #ec4899;
 --category-tenure: #a78bfa;
+
+/* Category Background Colors */
+--category-exploration-bg: rgba(59, 130, 246, 0.15);
+--category-contribution-bg: rgba(16, 185, 129, 0.15);
+--category-quality-bg: rgba(245, 158, 11, 0.15);
+--category-review-bg: rgba(139, 92, 246, 0.15);
+--category-community-bg: rgba(249, 115, 22, 0.15);
+--category-special-bg: rgba(236, 72, 153, 0.15);
+--category-tenure-bg: rgba(167, 139, 250, 0.15);
 ```
 
 ---
@@ -145,7 +288,7 @@ Use for any card with the glass-morphism effect.
   {/* content */}
 </div>
 
-// Interactive (hover: bg change, border change, -2px lift)
+// Interactive (hover: bg change, border change, glow effect)
 <div className="glass-card glass-card--interactive">
   {/* content */}
 </div>
@@ -154,14 +297,16 @@ Use for any card with the glass-morphism effect.
 **What `.glass-card` provides:**
 - `background: var(--glass-bg)`
 - `border: 1px solid var(--glass-border)`
-- `border-radius: calc(var(--radius) * 2)` (16px)
-- `backdrop-filter: blur(12px)`
+- `border-radius: var(--radius)` (8px)
+- `backdrop-filter: blur(16px)`
+- Subtle top gradient accent line (instrument panel aesthetic)
 
 **What `.glass-card--interactive` adds:**
+- `cursor: pointer`
 - Hover: lighter background (`--glass-bg-hover`)
-- Hover: lighter border (`--glass-border-hover`)
-- Hover: `-2px` lift (`translateY(-2px)`)
-- Smooth transition
+- Hover: accent border (`--accent-border`)
+- Hover: cyan glow (`0 0 20px var(--glow-primary)`)
+- Smooth transition (0.2s ease)
 
 **When to use `--interactive`:**
 - Clickable cards (stat cards, feature cards)
@@ -189,12 +334,11 @@ Use for authentication pages (login, register, password reset, etc.).
 
 **What `.auth-page` provides:**
 - `display: flex` with column direction
-- `min-height: calc(100lvh - var(--navbar-height))` (fills viewport below navbar)
-- Mobile: uses `--navbar-height-mobile`
+- `min-height: calc(100lvh - var(--navbar-total-height))` (fills viewport below navbar)
 
 **What `.auth-page__content` provides:**
 - Flexbox centering (horizontal and vertical)
-- Padding: `--space-xl` on desktop, `--space-lg` on mobile
+- Padding: `--space-xl` horizontal, `--space-lg` vertical
 
 **What `.auth-page__card` provides:**
 - `max-width: 420px` with `width: 100%`
@@ -207,19 +351,47 @@ Use for authentication pages (login, register, password reset, etc.).
 ### Buttons
 
 ```jsx
-// Primary action
+// Primary action - Accent color with glow
 <button className="btn-primary">Submit</button>
 <button className="btn-primary btn-primary--full">Full Width</button>
 <button className="btn-primary btn-primary--sm">Small</button>
 
-// Secondary action
+// Secondary action - Transparent with border
 <button className="btn-secondary">Cancel</button>
+<button className="btn-secondary btn-secondary--icon">
+  <i className="fa-solid fa-gear"></i>
+</button>
+
+// Danger action - Red with glow
+<button className="btn-danger">Delete</button>
+<button className="btn-danger btn-danger--sm">Small Delete</button>
+
+// Social login buttons
+<button className="btn-social btn-social--google">
+  <i className="fa-brands fa-google btn-social__icon"></i>
+</button>
+<button className="btn-social btn-social--apple">
+  <i className="fa-brands fa-apple btn-social__icon"></i>
+</button>
+<button className="btn-social btn-social--microsoft">
+  <i className="fa-brands fa-microsoft btn-social__icon"></i>
+</button>
 
 // Icon only
 <button className="btn-icon">
   <i className="fa-solid fa-gear"></i>
 </button>
 ```
+
+**Button specs:**
+- `.btn-primary`: `padding: 16px 32px`, `font-size: 14px`, uppercase, accent background with glow
+- `.btn-primary--sm`: `padding: 8px 20px`, `font-size: 13px`
+- `.btn-secondary`: transparent background, glass border, hover shows glass-bg
+- `.btn-secondary--icon`: square aspect ratio with `--space-sm` padding
+- `.btn-danger`: error color background with red glow
+- `.btn-danger--sm`: `padding: 8px 20px`, `font-size: 13px`
+- `.btn-social`: `flex: 1`, glass background, 12px padding
+- `.btn-icon`: 32x32px, transparent background, glass border
 
 ### Forms
 
@@ -246,8 +418,26 @@ Use for authentication pages (login, register, password reset, etc.).
   <span className="form-hint form-hint--error">
     <i className="fa-solid fa-xmark"></i> Needs uppercase
   </span>
+  <span className="form-hint form-hint--info">
+    <i className="fa-solid fa-info"></i> Optional
+  </span>
 </div>
+
+// Checkbox
+<label className="form-checkbox">
+  <input type="checkbox" />
+  <span className="form-checkbox-label">Remember me</span>
+</label>
 ```
+
+**Form specs:**
+- `.form-label`: `font-family: --font-technical`, `font-size: 11px`, uppercase, `--text-muted`
+- `.form-input`: `padding: 12px 16px`, `font-size: 15px`, glass background
+- `.form-input:focus`: accent border with glow ring
+- `.form-input.error`: error border color
+- `.form-textarea`: same as input, `min-height: 120px`, no resize
+- `.form-hint`: `font-size: --text-xs`, icons colored by state (success/error/info), text stays muted
+- `.form-checkbox`: 16x16px custom checkbox with accent fill when checked
 
 ### Empty State
 
@@ -260,6 +450,12 @@ Use for authentication pages (login, register, password reset, etc.).
   </p>
 </div>
 ```
+
+**Empty state specs:**
+- `.empty-state`: centered, `padding: 64px` (2x --space-xl)
+- `.empty-state__icon`: `font-size: 48px`, muted color, 50% opacity
+- `.empty-state__title`: `--text-secondary`
+- `.empty-state__description`: `--text-sm`, `--text-muted`
 
 ### Password Toggle
 
@@ -279,6 +475,10 @@ Use for authentication pages (login, register, password reset, etc.).
 </div>
 ```
 
+**Password toggle specs:**
+- `.password-toggle`: absolute positioned, `right: 4px`, 36x36px, centered icon
+- Hover: `--text-secondary` color
+
 ### Section Divider
 
 ```jsx
@@ -289,11 +489,74 @@ Use for authentication pages (login, register, password reset, etc.).
 </div>
 ```
 
-### Animations
+**Section divider specs:**
+- `.section-divider`: flex with gap, `margin: --space-lg 0`
+- `.section-divider__line`: 1px glass border color
+- `.section-divider__text`: `--text-xs`, muted, lowercase
 
-Utility classes for entrance animations and loading states.
+### Typography Utilities
 
-**Fade In Up** - Elements fade in while sliding up 20px:
+```jsx
+// Font families
+<span className="font-technical">DATA-2024</span>
+<h2 className="font-display">Starview</h2>
+
+// Text styles
+<span className="text-body">Regular body text</span>
+<span className="text-small">Smaller secondary text</span>
+<span className="text-muted">Muted hint text</span>
+
+// Accent text
+<span className="text-accent">Highlighted text</span>
+<span className="text-accent-glow">Glowing accent text</span>
+<span className="text-gradient">Gradient text</span>
+```
+
+**Typography utility specs:**
+- `.font-technical`: JetBrains Mono with 0.02em letter-spacing
+- `.font-display`: Outfit/Montserrat with -0.01em letter-spacing
+- `.text-body`: base font, 16px, normal line-height
+- `.text-small`: 14px, secondary color
+- `.text-muted`: muted color
+- `.text-accent`: accent color
+- `.text-accent-glow`: accent with text-shadow glow
+- `.text-gradient`: gradient background clipped to text
+
+### Data Display
+
+```jsx
+// Technical data readout (for stats, numbers)
+<div className="data-readout">42.7</div>
+<div className="data-label">BORTLE INDEX</div>
+
+// Status indicator dot
+<span className="status-indicator"></span>
+<span className="status-indicator status-indicator--success"></span>
+<span className="status-indicator status-indicator--warning"></span>
+<span className="status-indicator status-indicator--error"></span>
+```
+
+**Data display specs:**
+- `.data-readout`: `--font-technical`, `--text-2xl`, `--font-semibold`, accent color
+- `.data-label`: `--font-technical`, `--text-xs`, uppercase, 0.1em letter-spacing, muted
+- `.status-indicator`: 8x8px circle with glow, accent color by default
+- Variants: `--success`, `--warning`, `--error` with matching glow colors
+
+### Glow Effects
+
+```jsx
+// Apply accent glow to any element
+<div className="glass-card glow">Glowing card</div>
+<div className="glass-card glow-hover">Glow on hover</div>
+```
+
+---
+
+## Animations
+
+### Fade In Up
+
+Elements fade in while sliding up 20px:
 
 ```jsx
 // Single element
@@ -314,7 +577,9 @@ Utility classes for entrance animations and loading states.
 | `.animate-delay-3` | 0.3s delay |
 | `.animate-delay-4` | 0.4s delay |
 
-**Spin** - Infinite rotation for loading spinners:
+### Spin
+
+Infinite rotation for loading spinners:
 
 ```jsx
 <i className="fa-solid fa-spinner animate-spin"></i>
@@ -324,9 +589,25 @@ Utility classes for entrance animations and loading states.
 |-------|--------|
 | `.animate-spin` | 360-degree rotation (1s linear infinite) |
 
-**Accessibility:** All animations are automatically disabled when the user has `prefers-reduced-motion: reduce` enabled in their system settings.
+### Pulse
 
-**Staggered Card Animation** - LocationCard uses CSS custom properties for staggered entrance:
+Subtle opacity pulse for status indicators:
+
+```jsx
+<div className="status-indicator animate-pulse"></div>
+```
+
+| Class | Effect |
+|-------|--------|
+| `.animate-pulse` | Opacity 1 to 0.5 (2s ease-in-out infinite) |
+
+### Accessibility
+
+All animations are automatically disabled when the user has `prefers-reduced-motion: reduce` enabled in their system settings.
+
+### Staggered Card Animation
+
+LocationCard uses CSS custom properties for staggered entrance:
 
 ```css
 /* In component CSS */
@@ -339,7 +620,9 @@ Utility classes for entrance animations and loading states.
 <article style={{ '--card-index': index }}>
 ```
 
-**Dropdown Fade Animation** - For dropdowns with close animation timing:
+### Dropdown Fade Animation
+
+For dropdowns with close animation timing:
 
 ```css
 .dropdown {
@@ -441,8 +724,20 @@ export default ComponentName;
 
 ```css
 /* Mobile first approach */
+@media (max-width: 480px) {
+  /* Small mobile */
+}
+
 @media (max-width: 767px) {
-  /* Mobile styles */
+  /* Mobile */
+}
+
+@media (max-width: 768px) {
+  /* Mobile/tablet boundary */
+}
+
+@media (min-width: 640px) {
+  /* Small tablet and up */
 }
 
 @media (min-width: 768px) {
@@ -458,8 +753,30 @@ export default ComponentName;
 ```css
 --navbar-height: 72px;
 --navbar-height-mobile: 64px;
+--navbar-filters-height: 58px;
 --container-max: 1000px;
 ```
+
+---
+
+## Layout Classes
+
+### Page Wrapper
+
+```jsx
+<div className="page-wrapper">
+  <main className="main-content">
+    <div className="page-container">
+      {/* Page content */}
+    </div>
+  </main>
+</div>
+```
+
+**Layout specs:**
+- `.page-wrapper`: accounts for navbar height, fills viewport
+- `.main-content`: flex-grow to fill available space
+- `.page-container`: max-width 1000px, centered, responsive padding
 
 ---
 

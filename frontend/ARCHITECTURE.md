@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2025-12-29 (Sprint 10)
+**Last Updated:** 2026-01-06 (Sprint 11)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -27,7 +27,10 @@ starview_frontend/src/
 │   │   ├── LocationAutocomplete/  # Mapbox autocomplete
 │   │   │   ├── index.jsx
 │   │   │   └── styles.css
-│   │   └── ProfilePictureModal/
+│   │   ├── ProfilePictureModal/
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   └── Toast/                 # Global toast notifications
 │   │       ├── index.jsx
 │   │       └── styles.css
 │   ├── badges/                    # Badge-related components
@@ -56,8 +59,12 @@ starview_frontend/src/
 │   │       ├── BioForm/
 │   │       └── LocationForm/
 │   ├── explore/                   # Explore page components
-│   │   ├── ExploreMap/            # Mapbox map with markers and bottom card
+│   │   ├── ExploreMap/            # Mapbox map with markers, navigation mode, route display
+│   │   │   ├── index.jsx          # Main map component with controls
+│   │   │   ├── MapCard.jsx        # Unified card: bottom (mobile) + popup (desktop)
+│   │   │   └── styles.css
 │   │   ├── LocationCard/          # Location card with rating, distance, favorite
+│   │   ├── VirtualizedLocationList/ # Windowed list for mobile infinite scroll
 │   │   ├── Pagination/            # Desktop page navigation controls
 │   │   └── ViewToggle/            # List/map view toggle button
 │   ├── navbar/
@@ -110,9 +117,13 @@ starview_frontend/src/
 │   └── stats.js
 ├── context/
 │   └── AuthContext.jsx
+├── contexts/
+│   └── ToastContext.jsx           # Global toast notification system
 ├── utils/
 │   ├── badges.js
-│   └── geo.js                     # Distance calculation, formatting (Haversine)
+│   ├── geo.js                     # Distance calculation, formatting (Haversine)
+│   ├── navigation.js              # Duration formatting, navigation app deep links, geocoding
+│   └── units.js                   # Unit formatting with user preference support
 ├── styles/
 │   └── global.css                 # All design tokens, reset, and shared styles
 ├── App.jsx                        # Routes only
@@ -227,6 +238,8 @@ Re-render
 | `useUserLocation.js` | Browser geolocation with profile location fallback, 30-min cache |
 | `useMediaQuery.js` | CSS media query subscription; `useIsDesktop()` returns true at 1024px+ |
 | `useRequireAuth.js` | Auth guard for actions - redirects to login with return URL |
+| `useMapboxDirections.js` | Driving directions with cascade fallback (Mapbox -> ORS -> geodesic), LRU cache |
+| `useUnits.js` | Distance/elevation unit formatting with user preference (imperial/metric) |
 
 ### Shared Components
 
@@ -238,13 +251,16 @@ Re-render
 | `ImageCarousel` | Swipe (mobile) + arrow (desktop) image carousel with auto-play, lazy loading |
 | `LocationAutocomplete` | Mapbox location search autocomplete |
 | `ProfilePictureModal` | Modal for profile picture preview/zoom |
+| `Toast` | Toast notifications (success, error, warning, info) |
 
 ### Explore Page Components (`components/explore/`)
 
 | Component | Purpose |
 |-----------|---------|
-| `ExploreMap` | Mapbox GL map with clustered markers, bottom card, map controls |
+| `ExploreMap` | Mapbox GL map with clustered markers, navigation mode, route display |
+| `MapCard` | Unified location card for map: bottom slide-up (mobile) + centered popup (desktop) |
 | `LocationCard` | Mobile-first location card with image carousel, rating, distance, favorite toggle |
+| `VirtualizedLocationList` | Windowed/virtualized list for mobile infinite scroll (performance) |
 | `Pagination` | Desktop page navigation controls |
 | `ViewToggle` | List/map view toggle button |
 
@@ -355,6 +371,28 @@ function SomeForm({ onSuccess }) {
 
 ## State Management
 
+### ToastContext
+Global toast notification system for displaying user feedback.
+
+```javascript
+import { useToast } from '../contexts/ToastContext';
+
+function MyComponent() {
+  const { showToast } = useToast();
+
+  const handleAction = () => {
+    showToast('Action completed!', 'success');      // success, error, warning, info
+    showToast('Something went wrong', 'error', 6000); // custom duration (ms)
+  };
+}
+```
+
+**Features:**
+- Auto-dismisses after configurable duration (default 4s)
+- One toast at a time (replaces existing)
+- Fixed position top-right, below navbar
+- Manual dismiss via close button
+
 ### AuthContext
 Global authentication state using React Context API.
 
@@ -403,6 +441,7 @@ const queryClient = new QueryClient({
 - `useExploreData()` - Unified hook that selects infinite/paginated based on viewport
 - `useMapMarkers()` - Map GeoJSON with `markerMap` for O(1) lookups (30-min stale time)
 - `useToggleFavorite()` - Mutation with optimistic cache updates (syncs infinite, paginated, and mapGeoJSON caches)
+- `useMapboxDirections()` - Route fetching with cascading fallback (Mapbox -> OpenRouteService -> geodesic), 24hr LRU cache
 
 **Benefits:**
 - Automatic caching and deduplication

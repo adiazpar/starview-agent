@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2025-12-29 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2026-01-06 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -336,6 +336,7 @@ enrich_locations                      # Re-enrich locations with Mapbox data
   --id 123                            #   Enrich specific location
   --type observatory                  #   Filter by location type
   --delay 0.5                         #   Delay between API calls (default: 0.5s)
+  --elevation-only                    #   Only update elevation, skip geocoding
 seed_locations                        # Seed locations from JSON files
 
 # Cache & Deployment
