@@ -42,7 +42,7 @@
 | FavoriteLocation | `model_location_favorite.py` | M2M with optional nicknames |
 | Vote | `model_vote.py` | Generic upvote/downvote (ContentTypes) |
 | Report | `model_report.py` | Generic content reporting (ContentTypes) |
-| Badge | `model_badge.py` | 24 achievements across 7 categories |
+| Badge | `model_badge.py` | 27 achievements across 7 categories |
 | UserBadge | `model_user_badge.py` | User awards with timestamps |
 | LocationVisit | `model_location_visit.py` | Check-ins for badge progress |
 | Follow | `model_follow.py` | User following relationships (social network) |
@@ -185,11 +185,30 @@ GET /sitemap.xml                   - XML sitemap index for search engines
 
 | Service | Purpose |
 |---------|---------|
-| `badge_service.py` | Badge checking/awarding, Redis-cached progress |
+| `badge_service.py` | Badge checking/awarding, Redis-cached progress, profile completion config |
 | `location_service.py` | Mapbox enrichment (address, elevation) |
 | `vote_service.py` | Generic voting logic with toggle |
 | `report_service.py` | Content reporting validation |
 | `password_service.py` | Custom password validators |
+
+### Profile Completion Configuration
+
+The **Mission Ready** badge uses `PROFILE_COMPLETION_REQUIREMENTS` in `badge_service.py` as the single source of truth for what profile fields are required:
+
+```python
+PROFILE_COMPLETION_REQUIREMENTS = [
+    ('location', lambda p: bool(p.location)),
+    ('bio', lambda p: bool(p.bio)),
+    ('profile_picture', lambda p: bool(p.profile_picture) and hasattr(p.profile_picture, 'url')),
+    # Add new requirements here - badge logic automatically adapts
+]
+```
+
+**To add a new profile requirement:**
+1. Add tuple to `PROFILE_COMPLETION_REQUIREMENTS` with `(field_name, check_function)`
+2. Add `BadgeService.check_profile_complete_badge(user)` to the new field's update endpoint
+
+The badge award/revoke logic and progress display automatically adapt to new requirements.
 
 ---
 

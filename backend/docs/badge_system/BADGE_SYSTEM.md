@@ -135,6 +135,7 @@ Unique, harder-to-earn badges for dedicated users.
 
 | Badge Name | Description | Criteria | Icon Idea |
 |------------|-------------|----------|-----------|
+| **Mission Ready** | Completed setting up your profile | Complete all profile fields (location, bio, picture) | 🚀 Rocket ready for launch |
 | **Dark Sky Advocate** | Experience all light levels | Visit locations in all Bortle zones | 🌌 Gradient dark to light sky |
 | **Globe Trotter** | Worldwide explorer | Visit locations in 5+ states/countries | 🌍 Earth with star trails |
 | **Night Owl** | Dedicated observer | Visit 10+ locations (tracked visits) | 🌙 Moon with owl silhouette |
@@ -142,6 +143,11 @@ Unique, harder-to-earn badges for dedicated users.
 | **Meteor Chaser** | Seasonal event enthusiast | Visit during meteor shower dates | ☄️ Meteor streaking across sky |
 
 **Implementation Notes:**
+- **Mission Ready**: REVOCABLE badge - awarded when profile complete, revoked if user clears any required field
+  - Icon file: `/badges/mission-ready.png` (256x256 PNG)
+  - Checked via `BadgeService.check_profile_complete_badge(user)` in profile update views
+  - Requirements defined in `BadgeService.PROFILE_COMPLETION_REQUIREMENTS` (single source of truth)
+  - See [Adding Profile Requirements](#adding-profile-requirements) below
 - Dark Sky Advocate: Requires Bortle scale data on locations
 - Globe Trotter: Requires location state/country data
 - Night Owl: Requires visit tracking (not just favorites)
@@ -205,6 +211,7 @@ class Badge(models.Model):
         ('COMMENTS_WRITTEN', 'Comments Written'),
         ('FOLLOWER_COUNT', 'Follower Count'),
         ('TENURE_DAYS', 'Days as Member'),
+        ('PROFILE_COMPLETE', 'Profile Completion'),  # Revocable badge
         ('SPECIAL_CONDITION', 'Special Condition'),
     ]
     criteria_type = CharField(max_length=30, choices=CRITERIA_TYPES)
@@ -700,7 +707,7 @@ Response: {
 - [x] Create BadgeService class with all badge checking methods
 - [x] Add signal handlers for badge checking (LocationVisit, Location, Review, Vote, Follow, ReviewComment)
 - [x] Create backend API endpoints (GET badges, mark visited, pin badges)
-- [x] Seed all 26 badges (6 Exploration, 4 Contribution, 4 Quality, 5 Review, 5 Community, 1 Special, 1 Tenure)
+- [x] Seed all 27 badges (6 Exploration, 4 Contribution, 4 Quality, 5 Review, 5 Community, 2 Special, 1 Tenure)
 - [x] Implement auto-visit for location creators and reviewers
 - [x] Implement self-review prevention (app-wide data integrity)
 - [x] Create frontend service methods (API integration)
@@ -716,13 +723,13 @@ Response: {
 - `.claude/backend/tests/phase7/test_4_review_badges_upvote_ratio.py`
 
 **What Works:**
-- ✓ 26 badges seeded and fully functional:
+- ✓ 27 badges seeded and fully functional:
   - 6 Exploration badges (visit count)
   - 4 Contribution badges (locations added)
   - 4 Quality badges (locations with 4+ star average)
   - 5 Review badges (review count, upvotes, helpful ratios)
   - 5 Community badges (followers, comments on other's reviews)
-  - 1 Special badge (Photographer)
+  - 2 Special badges (Photographer, Mission Ready)
   - 1 Tenure badge (Pioneer)
 - ✓ Location visits tracked via LocationVisit model
 - ✓ Auto-visit: Creating location OR posting review automatically marks as visited
@@ -903,6 +910,68 @@ def revoke_badges_on_visit_delete(sender, instance, **kwargs):
 - **Stack Overflow, Untappd, Foursquare** - Use honor systems successfully
 - **Key insight:** Focus on personal growth, not comparison (reduces cheating motivation)
 - **Best practice:** Monitor passively, add friction only if needed
+
+---
+
+## Adding Profile Requirements
+
+The **Mission Ready** badge dynamically adapts to profile requirements. To add a new required profile field:
+
+### Step 1: Update PROFILE_COMPLETION_REQUIREMENTS
+
+In `starview_app/services/badge_service.py`, add a new tuple:
+
+```python
+PROFILE_COMPLETION_REQUIREMENTS = [
+    ('location', lambda p: bool(p.location)),
+    ('bio', lambda p: bool(p.bio)),
+    ('profile_picture', lambda p: bool(p.profile_picture) and hasattr(p.profile_picture, 'url')),
+    ('website', lambda p: bool(p.website)),  # ← Add new requirement here
+]
+```
+
+Each tuple contains:
+- **field_name**: Human-readable name (used in API response)
+- **check_function**: Lambda that takes `UserProfile` and returns `True` if complete
+
+### Step 2: Add Badge Check to Endpoint
+
+In the view that updates the new field, call the badge check:
+
+```python
+from starview_app.services.badge_service import BadgeService
+
+# After updating the profile field:
+BadgeService.check_profile_complete_badge(request.user)
+```
+
+### What Happens Automatically
+
+- Badge award/revoke logic adapts (checks `completed == total`)
+- Progress percentage display adapts (uses dynamic total)
+- API returns detailed item-by-item breakdown
+
+### API Response Format
+
+`BadgeService.get_profile_completion_status(user)` returns:
+
+```python
+{
+    'completed': 2,
+    'total': 4,
+    'is_complete': False,
+    'items': [
+        {'field': 'location', 'complete': True},
+        {'field': 'bio', 'complete': True},
+        {'field': 'profile_picture', 'complete': False},
+        {'field': 'website', 'complete': False}
+    ]
+}
+```
+
+### No Database Changes Required
+
+The badge's `criteria_value` in the database is ignored for PROFILE_COMPLETE badges - the system uses `len(PROFILE_COMPLETION_REQUIREMENTS)` dynamically.
 
 ---
 
