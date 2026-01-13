@@ -1,6 +1,6 @@
 # Starview API Integration Guide
 
-**Last Updated:** 2025-12-28
+**Last Updated:** 2026-01-13
 **API Version:** 1.0
 **Base URL:** `/api` (uses relative URLs via Axios configuration)
 **Production:** `https://starview.app` | **Development:** `http://127.0.0.1:8000`
@@ -14,6 +14,7 @@
 3. [API Endpoints](#api-endpoints)
    - [Health Check](#health-check)
    - [Platform Stats](#platform-stats)
+   - [Stargazing Data Endpoints](#stargazing-data-endpoints)
    - [Authentication Endpoints](#authentication-endpoints)
    - [Location Endpoints](#location-endpoints)
    - [Review Endpoints](#review-endpoints)
@@ -160,6 +161,56 @@ Get platform-wide statistics (total locations, reviews, and users).
 **Use Case:** Homepage hero stats display
 
 **Frontend Service:** `statsApi.getPlatformStats()`
+
+---
+
+### Stargazing Data Endpoints
+
+#### `GET /api/bortle/`
+Get Bortle scale rating (light pollution index) for a location.
+
+**Authentication:** Not required
+**Cache:** 30 days (light pollution changes slowly)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `lat` | number | Yes | Latitude (-90 to 90) |
+| `lng` | number | Yes | Longitude (-180 to 180) |
+
+**Success Response (200):**
+```json
+{
+  "bortle": 4,
+  "sqm": 20.8,
+  "description": "Rural/suburban transition",
+  "quality": "good",
+  "location": {
+    "lat": 34.0522,
+    "lng": -118.2437
+  }
+}
+```
+
+**Bortle Scale Values:**
+| Class | SQM Range | Description | Quality |
+|-------|-----------|-------------|---------|
+| 1 | 21.99-25.0 | Excellent dark-sky site | excellent |
+| 2 | 21.89-21.99 | Typical truly dark site | excellent |
+| 3 | 21.69-21.89 | Rural sky | very_good |
+| 4 | 20.49-21.69 | Rural/suburban transition | good |
+| 5 | 19.50-20.49 | Suburban sky | moderate |
+| 6 | 18.94-19.50 | Bright suburban sky | limited |
+| 7 | 18.38-18.94 | Suburban/urban transition | poor |
+| 8 | 17.80-18.38 | City sky | poor |
+| 9 | <17.80 | Inner-city sky | very_poor |
+
+**Error Responses:**
+- **400:** Missing or invalid lat/lng parameters
+- **404:** No data available (may be over water or outside coverage)
+- **503:** GeoTIFF data unavailable
+
+**Use Case:** ExploreMap light pollution overlay, location quality indicators
 
 ---
 

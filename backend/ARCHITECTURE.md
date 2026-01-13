@@ -165,7 +165,7 @@ POST /api/webhooks/ses-bounce/     - AWS SNS bounce notifications
 POST /api/webhooks/ses-complaint/  - AWS SNS spam complaints
 ```
 
-### Moon & Weather (`views/views_moon.py`, `views/views_weather.py`)
+### Moon, Weather & Light Pollution (`views/views_moon.py`, `views/views_weather.py`, `views/views_bortle.py`)
 ```
 GET  /api/moon-phases/            - Moon phases (today or date range)
      ?start_date=YYYY-MM-DD       - Optional start date
@@ -174,6 +174,9 @@ GET  /api/moon-phases/            - Moon phases (today or date range)
      ?key_dates_only=true         - Return only key phase dates
 GET  /api/weather/                - Weather data (requires location)
      ?lat=<lat>&lng=<lng>         - Location for forecast
+GET  /api/bortle/                 - Light pollution / Bortle scale rating (1-9)
+     ?lat=<lat>&lng=<lng>         - Location coordinates (required)
+     Response: { bortle, sqm, description, quality, location }
 ```
 
 ### Health (`views/views_health.py`)
@@ -200,6 +203,7 @@ GET /sitemap.xml                   - XML sitemap index for search engines
 | `location_service.py` | Mapbox enrichment (address, elevation) |
 | `moon_service.py` | Moon phase calculations using ephem library, moonrise/moonset times |
 | `weather_service.py` | Weather data fetching (external API integration) |
+| `bortle_service.py` | Bortle scale from World Atlas 2015 GeoTIFF (views/views_bortle.py contains inline logic) |
 | `vote_service.py` | Generic voting logic with toggle |
 | `report_service.py` | Content reporting validation |
 | `password_service.py` | Custom password validators |
@@ -397,6 +401,10 @@ diagnose_db                           # Diagnose database issues
 | Location detail | 15 min | 4x faster |
 | Map GeoJSON | 30 min | 60x faster (version-based O(1) invalidation) |
 | Badge progress | 5 min | 25x faster (cache hit) |
+| Weather forecast | 30 min | External API rate limit protection |
+| Weather historical | 7 days | Immutable past data |
+| Moon phases | 24 hours | Location-specific; 7 days without location |
+| Bortle scale | 30 days | Light pollution changes slowly (~1km precision) |
 
 **Cache Warming:** Use `python manage.py warm_cache` after deployments to pre-warm anonymous caches (map GeoJSON, location list pages, platform stats).
 
@@ -440,7 +448,8 @@ starview_app/
 │   ├── views_favorite.py      # 71 lines - favorite locations
 │   ├── views_stats.py         # 85 lines - platform statistics
 │   ├── views_webhooks.py      # 396 lines - AWS SNS handlers
-│   └── views_health.py        # 129 lines - health check endpoint
+│   ├── views_health.py        # 129 lines - health check endpoint
+│   └── views_bortle.py        # 235 lines - Bortle scale / light pollution API
 ├── services/
 │   ├── badge_service.py       # Badge checking/awarding logic
 │   ├── location_service.py    # Mapbox enrichment
