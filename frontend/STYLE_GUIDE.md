@@ -1,6 +1,6 @@
 # Starview Frontend Style Guide
 
-**Last Updated:** 2026-01-06
+**Last Updated:** 2026-01-13
 **Design System:** Observatory-themed glass-morphism (cyan/teal accent)
 **Source of Truth:** `starview_frontend/src/styles/global.css`
 
@@ -639,6 +639,21 @@ For dropdowns with close animation timing:
 ```
 
 Use with `useAnimatedDropdown` hook for coordinated close timing.
+
+### WebView Browser Fallback
+
+WebView browsers (Google app, Instagram in-app browser, etc.) have buggy viewport unit implementations. Use the `.webview-browser` class on `<html>` to provide fallbacks:
+
+```css
+/* WebView fallback - use static padding instead of viewport units */
+html.webview-browser .hero-section {
+  min-height: auto;
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+```
+
+The class is detected and added in `main.jsx` on app load.
 
 ---
 

@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2026-01-06 (Sprint 11)
+**Last Updated:** 2026-01-13 (Sprint 11)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -30,7 +30,10 @@ starview_frontend/src/
 │   │   ├── ProfilePictureModal/
 │   │   │   ├── index.jsx
 │   │   │   └── styles.css
-│   │   └── Toast/                 # Global toast notifications
+│   │   ├── Toast/                 # Global toast notifications
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   └── MoonPhaseGraphic/      # SVG moon phase rendering with rotation
 │   │       ├── index.jsx
 │   │       └── styles.css
 │   ├── badges/                    # Badge-related components
@@ -76,7 +79,9 @@ starview_frontend/src/
 │   ├── Footer/                    # Footer component (empty/placeholder)
 │   ├── ProtectedRoute/
 │   │   └── index.jsx
-│   └── GuestRoute/                # Redirects authenticated users from login/register
+│   ├── GuestRoute/                # Redirects authenticated users from login/register
+│   │   └── index.jsx
+│   └── ScrollToTop/               # Scroll position management on navigation
 │       └── index.jsx
 ├── pages/
 │   ├── Home/
@@ -93,6 +98,9 @@ starview_frontend/src/
 │   ├── SocialAccountExists/
 │   ├── PasswordResetRequest/
 │   ├── PasswordResetConfirm/
+│   ├── MoonPhase/                 # Lunar data display for stargazing planning
+│   ├── Terms/                     # Terms of service page
+│   ├── Privacy/                   # Privacy policy page
 │   └── NotFound/
 ├── hooks/                         # Flat - no folders
 │   ├── useTheme.js
@@ -104,6 +112,8 @@ starview_frontend/src/
 │   ├── useLocations.js            # React Query hooks: useLocations (infinite), useLocationsPaginated, useToggleFavorite
 │   ├── useMapMarkers.js           # React Query hook for map GeoJSON (30-min stale time, O(1) lookup via markerMap)
 │   ├── useExploreData.js          # Unified data hook - switches between infinite (mobile) and paginated (desktop)
+│   ├── useMoonPhases.js           # React Query hooks for moon phase data (useMoonPhases, useTodayMoonPhase, etc.)
+│   ├── useSEO.js                  # Dynamic page meta tags (title, description, canonical, OG)
 │   ├── useAnimatedDropdown.js     # Dropdown state with CSS animation timing
 │   ├── useIntersectionObserver.js # Viewport detection for infinite scroll
 │   ├── useUserLocation.js         # Browser geolocation with profile location fallback
@@ -114,6 +124,7 @@ starview_frontend/src/
 │   ├── auth.js
 │   ├── profile.js
 │   ├── locations.js
+│   ├── moon.js                    # Moon phase API calls
 │   └── stats.js
 ├── context/
 │   └── AuthContext.jsx
@@ -218,6 +229,7 @@ Re-render
 | `auth.js` | Login, logout, registration, checkStatus |
 | `profile.js` | User profile, badges, favorites, social accounts (profileApi + publicUserApi) |
 | `locations.js` | Location CRUD |
+| `moon.js` | Moon phase data (getPhases, getCurrentWeek, getCurrentMonth) |
 | `stats.js` | Platform statistics (locations, reviews, stargazers) |
 
 ### Hooks (Flat)
@@ -240,6 +252,8 @@ Re-render
 | `useRequireAuth.js` | Auth guard for actions - redirects to login with return URL |
 | `useMapboxDirections.js` | Driving directions with cascade fallback (Mapbox -> ORS -> geodesic), LRU cache |
 | `useUnits.js` | Distance/elevation unit formatting with user preference (imperial/metric) |
+| `useMoonPhases.js` | Moon phase data hooks: `useMoonPhases`, `useTodayMoonPhase`, `useWeeklyMoonPhases`, `useMonthlyMoonPhases` |
+| `useSEO.js` | Dynamic document meta tags (title, description, canonical, OG/Twitter cards) |
 
 ### Shared Components
 
@@ -252,6 +266,7 @@ Re-render
 | `LocationAutocomplete` | Mapbox location search autocomplete |
 | `ProfilePictureModal` | Modal for profile picture preview/zoom |
 | `Toast` | Toast notifications (success, error, warning, info) |
+| `MoonPhaseGraphic` | SVG moon phase with accurate shadow, texture, and rotation angle |
 
 ### Explore Page Components (`components/explore/`)
 
@@ -282,6 +297,9 @@ Re-render
 | `/social-account-exists` | SocialAccountExists | No | - |
 | `/password-reset` | PasswordResetRequest | No | - |
 | `/password-reset-confirm/:uidb64/:token` | PasswordResetConfirm | No | - |
+| `/moon` | MoonPhase | No | - |
+| `/terms` | Terms | No | - |
+| `/privacy` | Privacy | No | - |
 | `*` (404) | NotFound | No | - |
 
 **Route Guards:**

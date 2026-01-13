@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2026-01-06 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2026-01-13 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -165,6 +165,17 @@ POST /api/webhooks/ses-bounce/     - AWS SNS bounce notifications
 POST /api/webhooks/ses-complaint/  - AWS SNS spam complaints
 ```
 
+### Moon & Weather (`views/views_moon.py`, `views/views_weather.py`)
+```
+GET  /api/moon-phases/            - Moon phases (today or date range)
+     ?start_date=YYYY-MM-DD       - Optional start date
+     ?end_date=YYYY-MM-DD         - Optional end date
+     ?lat=<lat>&lng=<lng>         - Optional location for moonrise/moonset
+     ?key_dates_only=true         - Return only key phase dates
+GET  /api/weather/                - Weather data (requires location)
+     ?lat=<lat>&lng=<lng>         - Location for forecast
+```
+
 ### Health (`views/views_health.py`)
 ```
 GET /health/                       - DB, cache, Celery status
@@ -187,6 +198,8 @@ GET /sitemap.xml                   - XML sitemap index for search engines
 |---------|---------|
 | `badge_service.py` | Badge checking/awarding, Redis-cached progress, profile completion config |
 | `location_service.py` | Mapbox enrichment (address, elevation) |
+| `moon_service.py` | Moon phase calculations using ephem library, moonrise/moonset times |
+| `weather_service.py` | Weather data fetching (external API integration) |
 | `vote_service.py` | Generic voting logic with toggle |
 | `report_service.py` | Content reporting validation |
 | `password_service.py` | Custom password validators |
@@ -431,6 +444,8 @@ starview_app/
 ├── services/
 │   ├── badge_service.py       # Badge checking/awarding logic
 │   ├── location_service.py    # Mapbox enrichment
+│   ├── moon_service.py        # Moon phase calculations (ephem library)
+│   ├── weather_service.py     # Weather data fetching
 │   ├── vote_service.py        # Generic voting logic
 │   ├── report_service.py      # Content reporting
 │   └── password_service.py    # Password validation
