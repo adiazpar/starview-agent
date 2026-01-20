@@ -77,6 +77,9 @@ starview_frontend/src/
 │   │   │   ├── index.jsx          # Main map component with controls
 │   │   │   ├── MapCard.jsx        # Unified card: bottom (mobile) + popup (desktop)
 │   │   │   └── styles.css
+│   │   ├── ExploreFiltersModal/   # Filter modal (type, rating, distance, verified)
+│   │   │   ├── index.jsx          # Full-screen on mobile, centered dialog on desktop
+│   │   │   └── styles.css
 │   │   ├── LocationCard/          # Location card with rating, distance, favorite
 │   │   ├── VirtualizedLocationList/ # Windowed list for mobile infinite scroll
 │   │   ├── Pagination/            # Desktop page navigation controls
@@ -272,11 +275,12 @@ Re-render
 | `useProfileData.js` | React Query hook for profile data (badges, social accounts) |
 | `useStats.js` | React Query hook for platform statistics |
 | `useLocations.js` | React Query hooks: `useLocations` (infinite), `useLocationsPaginated` (desktop), `useToggleFavorite` |
-| `useMapMarkers.js` | React Query hook for map GeoJSON; returns `{ geojson, markers, markerMap }` (30-min stale time) |
+| `useMapMarkers.js` | React Query hook for map GeoJSON with filter support; returns `{ geojson, markers, markerMap }` |
 | `useExploreData.js` | Unified data fetching for Explore page - automatically uses infinite (mobile) or paginated (desktop) |
 | `useAnimatedDropdown.js` | Dropdown state management with CSS close animation timing |
 | `useIntersectionObserver.js` | Viewport detection for infinite scroll triggers |
-| `useUserLocation.js` | Browser geolocation with profile location fallback, 30-min cache |
+| `useUserLocation.js` | Browser geolocation with profile location fallback, 30-min cache, source tracking |
+| `useExploreFilters.js` | URL-based filter state for Explore page (search, type, rating, distance, verified, sort) |
 | `useMediaQuery.js` | CSS media query subscription; `useIsDesktop()` returns true at 1024px+ |
 | `useRequireAuth.js` | Auth guard for actions - redirects to login with return URL |
 | `useMapboxDirections.js` | Driving directions with cascade fallback (Mapbox -> ORS -> geodesic), LRU cache |
@@ -310,6 +314,7 @@ Re-render
 | `ExploreMap` | Mapbox GL map with clustered markers, navigation mode, route display |
 | `MapCard` | Unified location card for map: bottom slide-up (mobile) + centered popup (desktop) |
 | `LocationCard` | Mobile-first location card with image carousel, rating, distance, favorite toggle |
+| `ExploreFiltersModal` | Full-screen filter modal: type, rating, distance, verified. Single-section mode for mobile chips |
 | `VirtualizedLocationList` | Windowed/virtualized list for mobile infinite scroll (performance) |
 | `Pagination` | Desktop page navigation controls |
 | `ViewToggle` | List/map view toggle button |
@@ -498,7 +503,7 @@ const queryClient = new QueryClient({
 - `useLocations()` - Infinite scroll locations for mobile
 - `useLocationsPaginated()` - Paginated locations for desktop
 - `useExploreData()` - Unified hook that selects infinite/paginated based on viewport
-- `useMapMarkers()` - Map GeoJSON with `markerMap` for O(1) lookups (30-min stale time)
+- `useMapMarkers()` - Map GeoJSON with `markerMap` for O(1) lookups (30-min unfiltered, 5-min filtered)
 - `useToggleFavorite()` - Mutation with optimistic cache updates (syncs infinite, paginated, and mapGeoJSON caches)
 - `useMapboxDirections()` - Route fetching with cascading fallback (Mapbox -> OpenRouteService -> geodesic), 24hr LRU cache
 

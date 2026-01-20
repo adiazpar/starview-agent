@@ -76,11 +76,19 @@ GET  /accounts/google/login/       - Google OAuth
 ### Locations (`views/views_location.py`)
 ```
 GET    /api/locations/                      - List (paginated 20/page)
+       ?search=<text>                       - Text search (name, address, region, country)
+       ?type=<types>                        - Filter by type (comma-separated: dark_sky_site,observatory,etc)
+       ?minRating=<1-5>                     - Minimum rating filter
+       ?verified=true                       - Only verified locations
+       ?near=<lat,lng>                      - Distance filter center (Haversine)
+       ?radius=<miles>                      - Distance filter radius (default: 50)
+       ?sort=<field>                        - Sort order: -created_at, average_rating, distance, etc.
 POST   /api/locations/                      - Create (auth required)
 GET    /api/locations/{id}/                 - Detail
 PUT    /api/locations/{id}/                 - Update (auth required)
 DELETE /api/locations/{id}/                 - Delete (auth required)
 GET    /api/locations/map_geojson/          - GeoJSON FeatureCollection for Mapbox (version-cached)
+       (Supports same filter params as list endpoint)
 GET    /api/locations/{id}/info_panel/      - Map popup data
 POST   /api/locations/{id}/mark-visited/    - Check-in to location (creates LocationVisit)
 DELETE /api/locations/{id}/unmark-visited/  - Remove check-in
