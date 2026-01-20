@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2026-01-13 (Sprint 11)
+**Last Updated:** 2026-01-19 (Sprint 11)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -33,9 +33,20 @@ starview_frontend/src/
 │   │   ├── Toast/                 # Global toast notifications
 │   │   │   ├── index.jsx
 │   │   │   └── styles.css
-│   │   └── MoonPhaseGraphic/      # SVG moon phase rendering with rotation
+│   │   ├── MoonPhaseGraphic/      # SVG moon phase rendering with rotation
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   ├── WeatherGraphic/        # Weather icon (clouds/sun/moon/rain)
+│   │   │   └── index.jsx
+│   │   ├── BortleSkySlider/       # Interactive Bortle comparison slider
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   └── DateNavigator/         # Date selection for calendar views
 │   │       ├── index.jsx
 │   │       └── styles.css
+│   ├── CookieConsent/             # GDPR/analytics cookie consent
+│   │   ├── index.jsx
+│   │   └── CookiePreferencesButton.jsx
 │   ├── badges/                    # Badge-related components
 │   │   ├── BadgeCard/
 │   │   ├── BadgeCompact/
@@ -98,9 +109,19 @@ starview_frontend/src/
 │   ├── SocialAccountExists/
 │   ├── PasswordResetRequest/
 │   ├── PasswordResetConfirm/
-│   ├── MoonPhase/                 # Lunar data display for stargazing planning
+│   ├── Moon/                      # Moon phase educational page (lunar cycle, calendar link)
+│   ├── Sky/                       # Sky conditions hub page (Tonight, Moon, Bortle, Weather)
+│   ├── Tonight/                   # Tonight's stargazing conditions (Sky Score dashboard)
+│   │   ├── index.jsx
+│   │   ├── HourlyTimeline.jsx     # Interactive nighttime weather timeline
+│   │   ├── CloudLayerBreakdown.jsx # Low/mid/high cloud layer visualization
+│   │   └── utils.js               # Nighttime hour filtering utilities
+│   ├── Bortle/                    # Bortle scale educational page
+│   ├── Weather/                   # Weather factors educational page
 │   ├── Terms/                     # Terms of service page
 │   ├── Privacy/                   # Privacy policy page
+│   ├── Accessibility/             # Accessibility statement page
+│   ├── CCPA/                      # California privacy rights page
 │   └── NotFound/
 ├── hooks/                         # Flat - no folders
 │   ├── useTheme.js
@@ -113,6 +134,9 @@ starview_frontend/src/
 │   ├── useMapMarkers.js           # React Query hook for map GeoJSON (30-min stale time, O(1) lookup via markerMap)
 │   ├── useExploreData.js          # Unified data hook - switches between infinite (mobile) and paginated (desktop)
 │   ├── useMoonPhases.js           # React Query hooks for moon phase data (useMoonPhases, useTodayMoonPhase, etc.)
+│   ├── useWeather.js              # React Query hook for weather data (forecast, historical, historical_average)
+│   ├── useNighttimeWeather.js     # Optimized hook for Tonight page (single API call for 6PM-6AM)
+│   ├── useBortle.js               # React Query hook for Bortle scale (light pollution)
 │   ├── useSEO.js                  # Dynamic page meta tags (title, description, canonical, OG)
 │   ├── useAnimatedDropdown.js     # Dropdown state with CSS animation timing
 │   ├── useIntersectionObserver.js # Viewport detection for infinite scroll
@@ -125,11 +149,14 @@ starview_frontend/src/
 │   ├── profile.js
 │   ├── locations.js
 │   ├── moon.js                    # Moon phase API calls
+│   ├── weather.js                 # Weather API (getForecast, getForecastRange)
+│   ├── bortle.js                  # Bortle scale API
 │   └── stats.js
 ├── context/
 │   └── AuthContext.jsx
 ├── contexts/
-│   └── ToastContext.jsx           # Global toast notification system
+│   ├── ToastContext.jsx           # Global toast notification system
+│   └── CookieConsentContext.jsx   # GDPR cookie consent state management
 ├── utils/
 │   ├── badges.js
 │   ├── geo.js                     # Distance calculation, formatting (Haversine)
@@ -230,6 +257,8 @@ Re-render
 | `profile.js` | User profile, badges, favorites, social accounts (profileApi + publicUserApi) |
 | `locations.js` | Location CRUD |
 | `moon.js` | Moon phase data (getPhases, getCurrentWeek, getCurrentMonth) |
+| `weather.js` | Weather data (getForecast, getForecastRange with date support) |
+| `bortle.js` | Bortle scale data (getBortle) |
 | `stats.js` | Platform statistics (locations, reviews, stargazers) |
 
 ### Hooks (Flat)
@@ -253,6 +282,9 @@ Re-render
 | `useMapboxDirections.js` | Driving directions with cascade fallback (Mapbox -> ORS -> geodesic), LRU cache |
 | `useUnits.js` | Distance/elevation unit formatting with user preference (imperial/metric) |
 | `useMoonPhases.js` | Moon phase data hooks: `useMoonPhases`, `useTodayMoonPhase`, `useWeeklyMoonPhases`, `useMonthlyMoonPhases` |
+| `useWeather.js` | Weather data with source-aware responses (forecast/historical/historical_average) |
+| `useNighttimeWeather.js` | Optimized Tonight page hook - single API call for 6PM-6AM data |
+| `useBortle.js` | Bortle scale (light pollution) data hook |
 | `useSEO.js` | Dynamic document meta tags (title, description, canonical, OG/Twitter cards) |
 
 ### Shared Components
@@ -267,6 +299,9 @@ Re-render
 | `ProfilePictureModal` | Modal for profile picture preview/zoom |
 | `Toast` | Toast notifications (success, error, warning, info) |
 | `MoonPhaseGraphic` | SVG moon phase with accurate shadow, texture, and rotation angle |
+| `WeatherGraphic` | Weather icon (clouds/sun/moon/rain based on conditions) |
+| `BortleSkySlider` | Interactive Bortle comparison slider showing sky quality differences |
+| `DateNavigator` | Date selection with prev/next/today navigation |
 
 ### Explore Page Components (`components/explore/`)
 
@@ -291,15 +326,21 @@ Re-render
 | `/profile` | Profile | **Yes** | ProtectedRoute |
 | `/users/:username` | PublicProfile | No | - |
 | `/explore` | Explore | No | - |
+| `/sky` | Sky (hub page) | No | - |
+| `/tonight` | Tonight (Sky Score) | No | - |
+| `/bortle` | Bortle (educational) | No | - |
+| `/moon` | Moon (educational) | No | - |
+| `/weather` | Weather (educational) | No | - |
 | `/verify-email` | VerifyEmail | No | - |
 | `/email-verified` | EmailVerified | No | - |
 | `/email-confirm-error` | EmailConfirmError | No | - |
 | `/social-account-exists` | SocialAccountExists | No | - |
 | `/password-reset` | PasswordResetRequest | No | - |
 | `/password-reset-confirm/:uidb64/:token` | PasswordResetConfirm | No | - |
-| `/moon` | MoonPhase | No | - |
 | `/terms` | Terms | No | - |
 | `/privacy` | Privacy | No | - |
+| `/accessibility` | Accessibility | No | - |
+| `/ccpa` | CCPA | No | - |
 | `*` (404) | NotFound | No | - |
 
 **Route Guards:**

@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2026-01-13 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2026-01-19 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -170,13 +170,18 @@ POST /api/webhooks/ses-complaint/  - AWS SNS spam complaints
 GET  /api/moon-phases/            - Moon phases (today or date range)
      ?start_date=YYYY-MM-DD       - Optional start date
      ?end_date=YYYY-MM-DD         - Optional end date
-     ?lat=<lat>&lng=<lng>         - Optional location for moonrise/moonset
+     ?lat=<lat>&lng=<lng>         - Optional location for moonrise/moonset + rotation angle
      ?key_dates_only=true         - Return only key phase dates
-GET  /api/weather/                - Weather data (requires location)
-     ?lat=<lat>&lng=<lng>         - Location for forecast
+GET  /api/weather/                - Weather data with automatic source selection
+     ?lat=<lat>&lng=<lng>         - Location coordinates (required)
+     ?start_date=YYYY-MM-DD       - Optional start date (default: today)
+     ?end_date=YYYY-MM-DD         - Optional end date (default: start_date)
+     Sources: forecast (0-16 days), historical (past), historical_average (>16 days)
+     Response: { current, daily[], sources, warnings }
 GET  /api/bortle/                 - Light pollution / Bortle scale rating (1-9)
      ?lat=<lat>&lng=<lng>         - Location coordinates (required)
      Response: { bortle, sqm, description, quality, location }
+     Corrections: Temporal (2.5%/year since 2015), Zenith-to-Bortle (+1 for SQM < 21)
 ```
 
 ### Health (`views/views_health.py`)
@@ -188,7 +193,8 @@ GET /health/                       - DB, cache, Celery status
 ```
 GET /sitemap.xml                   - XML sitemap index for search engines
 ```
-- **StaticViewSitemap:** Homepage and static pages (priority 1.0)
+- **StaticViewSitemap:** Homepage and key pages (/, /explore, /sky, /tonight, /bortle, /moon, /weather)
+- **LegalPageSitemap:** Legal pages (/terms, /privacy, /accessibility, /ccpa)
 - **UserProfileSitemap:** Public user profiles (priority 0.6, limit 1000)
 - Improves SEO and Google AI Overviews visibility
 - Only exposes public URLs - no sensitive data
@@ -201,8 +207,8 @@ GET /sitemap.xml                   - XML sitemap index for search engines
 |---------|---------|
 | `badge_service.py` | Badge checking/awarding, Redis-cached progress, profile completion config |
 | `location_service.py` | Mapbox enrichment (address, elevation) |
-| `moon_service.py` | Moon phase calculations using ephem library, moonrise/moonset times |
-| `weather_service.py` | Weather data fetching (external API integration) |
+| `moon_service.py` | Moon phase calculations using ephem library, moonrise/moonset times, rotation angles for accurate display |
+| `weather_service.py` | Open-Meteo API integration with automatic source selection (forecast, historical, historical average) |
 | `bortle_service.py` | Bortle scale from World Atlas 2015 GeoTIFF (views/views_bortle.py contains inline logic) |
 | `vote_service.py` | Generic voting logic with toggle |
 | `report_service.py` | Content reporting validation |
@@ -395,16 +401,17 @@ diagnose_db                           # Diagnose database issues
 - Result: 99.3% query reduction on list endpoints
 
 ### Caching (Redis)
-| Data | TTL | Impact |
-|------|-----|--------|
-| Location list | 15 min | 10x faster |
-| Location detail | 15 min | 4x faster |
-| Map GeoJSON | 30 min | 60x faster (version-based O(1) invalidation) |
-| Badge progress | 5 min | 25x faster (cache hit) |
-| Weather forecast | 30 min | External API rate limit protection |
-| Weather historical | 7 days | Immutable past data |
-| Moon phases | 24 hours | Location-specific; 7 days without location |
-| Bortle scale | 30 days | Light pollution changes slowly (~1km precision) |
+| Data | TTL | Precision | Impact |
+|------|-----|-----------|--------|
+| Location list | 15 min | -- | 10x faster |
+| Location detail | 15 min | -- | 4x faster |
+| Map GeoJSON | 30 min | -- | 60x faster (version-based O(1) invalidation) |
+| Badge progress | 5 min | -- | 25x faster (cache hit) |
+| Weather forecast | 30 min | ~11km (1 decimal) | External API rate limit protection |
+| Weather historical | 7 days | ~11km (1 decimal) | Immutable past data |
+| Weather hist avg | 30 days | ~11km (1 decimal) | Statistical averages stable |
+| Moon phases | 24 hours | ~1km (2 decimal) | Location-specific; 7 days without location |
+| Bortle scale | 30 days | ~1km (2 decimal) | Light pollution changes slowly |
 
 **Cache Warming:** Use `python manage.py warm_cache` after deployments to pre-warm anonymous caches (map GeoJSON, location list pages, platform stats).
 

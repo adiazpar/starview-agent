@@ -1,6 +1,6 @@
 # Starview API Integration Guide
 
-**Last Updated:** 2026-01-13
+**Last Updated:** 2026-01-19
 **API Version:** 1.0
 **Base URL:** `/api` (uses relative URLs via Axios configuration)
 **Production:** `https://starview.app` | **Development:** `http://127.0.0.1:8000`
@@ -211,6 +211,75 @@ Get Bortle scale rating (light pollution index) for a location.
 - **503:** GeoTIFF data unavailable
 
 **Use Case:** ExploreMap light pollution overlay, location quality indicators
+
+---
+
+#### `GET /api/weather/`
+Get weather data for a location with automatic source selection based on date.
+
+**Authentication:** Not required
+**Cache:** 30 min (forecast), 7 days (historical), 30 days (historical avg)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `lat` | number | Yes | Latitude (-90 to 90) |
+| `lng` | number | Yes | Longitude (-180 to 180) |
+| `start_date` | string | No | Start date (YYYY-MM-DD, default: today) |
+| `end_date` | string | No | End date (YYYY-MM-DD, default: start_date) |
+
+**Success Response (200):**
+```json
+{
+  "current": {
+    "cloud_cover": 25,
+    "humidity": 65,
+    "wind_speed": 12,
+    "temperature": 15,
+    "precipitation_type": "none",
+    "precipitation_probability": 10,
+    "visibility": 10
+  },
+  "daily": [
+    {
+      "date": "2026-01-19",
+      "data_type": "forecast",
+      "confidence": "high",
+      "summary": {
+        "cloud_cover_avg": 30,
+        "humidity_avg": 60
+      },
+      "hourly": [
+        {
+          "time": "2026-01-19T18:00:00",
+          "cloud_cover": 25,
+          "cloud_cover_low": 10,
+          "cloud_cover_mid": 15,
+          "cloud_cover_high": 5,
+          "humidity": 65,
+          "temperature": 12,
+          "visibility": 10
+        }
+      ]
+    }
+  ],
+  "sources": ["Open-Meteo Forecast API"],
+  "location": { "lat": 34.0522, "lng": -118.2437 }
+}
+```
+
+**Data Sources by Date:**
+| Date Range | Source | Confidence |
+|------------|--------|------------|
+| Today to +16 days | Open-Meteo Forecast | high |
+| Past dates | Open-Meteo Historical | high |
+| +17 days and beyond | 5-year historical average | medium/low |
+
+**Cache Precision:** ~11km (1 decimal place) - matches backend grid cells
+
+**Frontend Service:** `weatherApi.getForecast({ lat, lng, date })`, `weatherApi.getForecastRange({ lat, lng, startDate, endDate })`
+
+**Frontend Hook:** `useWeather({ lat, lng, date })`, `useNighttimeWeather({ lat, lng })`
 
 ---
 
@@ -2561,7 +2630,7 @@ For bugs, feature requests, or questions:
 
 ---
 
-**Last Updated:** 2025-12-28
+**Last Updated:** 2026-01-19
 **API Version:** 1.0
 **Production URL:** https://starview.app
 
@@ -2576,6 +2645,9 @@ All API endpoints are accessed through service modules in `starview_frontend/src
 - **`locations.js`** - Location endpoints (`locationsApi`)
 - **`profile.js`** - User profile endpoints (`profileApi`, `publicUserApi`)
 - **`stats.js`** - Platform stats (`statsApi`)
+- **`weather.js`** - Weather data (`weatherApi`)
+- **`bortle.js`** - Bortle scale/light pollution (`bortleApi`)
+- **`moon.js`** - Moon phase data (`moonApi`)
 
 **Example Import:**
 ```javascript
@@ -2583,4 +2655,6 @@ import { authApi } from './services/auth';
 import { locationsApi } from './services/locations';
 import { profileApi, publicUserApi } from './services/profile';
 import statsApi from './services/stats';
+import weatherApi from './services/weather';
+import bortleApi from './services/bortle';
 ```
