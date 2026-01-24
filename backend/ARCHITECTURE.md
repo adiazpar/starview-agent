@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2026-01-19 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2026-01-24 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -80,8 +80,9 @@ GET    /api/locations/                      - List (paginated 20/page)
        ?type=<types>                        - Filter by type (comma-separated: dark_sky_site,observatory,etc)
        ?minRating=<1-5>                     - Minimum rating filter
        ?verified=true                       - Only verified locations
-       ?near=<lat,lng>                      - Distance filter center (Haversine)
+       ?near=<lat,lng>                      - Distance filter center (PostGIS ST_DWithin)
        ?radius=<miles>                      - Distance filter radius (default: 50)
+       ?maxBortle=<1-9>                     - Maximum Bortle class filter
        ?sort=<field>                        - Sort order: -created_at, average_rating, distance, etc.
 POST   /api/locations/                      - Create (auth required)
 GET    /api/locations/{id}/                 - Detail
@@ -94,6 +95,11 @@ POST   /api/locations/{id}/mark-visited/    - Check-in to location (creates Loca
 DELETE /api/locations/{id}/unmark-visited/  - Remove check-in
 POST   /api/locations/{id}/toggle_favorite/ - Toggle favorite status (add/remove)
 POST   /api/locations/{id}/report/          - Report location
+GET    /api/locations/hero_carousel/        - Random high-quality images for homepage (daily rotation)
+GET    /api/locations/popular_nearby/       - Top-rated locations near coordinates
+       ?lat=<lat>&lng=<lng>                 - User coordinates (required)
+       ?limit=<n>                           - Max results (default: 8)
+       ?radius=<miles>                      - Search radius (default: 500)
 ```
 
 ### Reviews (`views/views_review.py`)
@@ -190,6 +196,15 @@ GET  /api/bortle/                 - Light pollution / Bortle scale rating (1-9)
      ?lat=<lat>&lng=<lng>         - Location coordinates (required)
      Response: { bortle, sqm, description, quality, location }
      Corrections: Temporal (2.5%/year since 2015), Zenith-to-Bortle (+1 for SQM < 21)
+```
+
+### IP Geolocation (`views/views_geoip.py`)
+```
+GET  /api/geolocate/              - Get approximate location from IP address
+     Response: { latitude, longitude, city, region, country, source: "ip" }
+     Uses Cloudflare geolocation headers (Managed Transform)
+     Returns null coordinates if headers unavailable
+     Development: Returns San Francisco as fallback
 ```
 
 ### Health (`views/views_health.py`)
@@ -455,7 +470,7 @@ starview_app/
 │       └── model_email_suppressionlist.py  # 7K lines
 ├── views/
 │   ├── views_auth.py          # 827 lines - auth endpoints
-│   ├── views_location.py      # 450 lines - location CRUD + check-ins
+│   ├── views_location.py      # 987 lines - location CRUD + check-ins + hero_carousel + popular_nearby
 │   ├── views_review.py        # 400 lines - review/comment CRUD
 │   ├── views_user.py          # 647 lines - profile management
 │   ├── views_badge.py         # 225 lines - badge endpoints
@@ -464,7 +479,8 @@ starview_app/
 │   ├── views_stats.py         # 85 lines - platform statistics
 │   ├── views_webhooks.py      # 396 lines - AWS SNS handlers
 │   ├── views_health.py        # 129 lines - health check endpoint
-│   └── views_bortle.py        # 235 lines - Bortle scale / light pollution API
+│   ├── views_bortle.py        # 235 lines - Bortle scale / light pollution API
+│   └── views_geoip.py         # 65 lines - IP geolocation (Cloudflare headers)
 ├── services/
 │   ├── badge_service.py       # Badge checking/awarding logic
 │   ├── location_service.py    # Mapbox enrichment

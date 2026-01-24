@@ -41,6 +41,7 @@ Pause and ask the user if they want to run `/update-docs` before proceeding.
 | `starview-badge-creator` | Adding new badges to the badge system |
 | `starview-api-endpoint` | Full-stack API: DRF backend + frontend services + React Query |
 | `starview-product-lab` | Feature ideation, product validation, competitive analysis, identity refinement |
+| `generate-descriptions` | Backfill observatory descriptions using sub-agents with web research |
 
 **Auto-invoke triggers:**
 - "create a badge", "new badge", "add a badge" → Enter plan mode, then run `/create-badge`

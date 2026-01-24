@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2026-01-19 (Sprint 11)
+**Last Updated:** 2026-01-24 (Sprint 11)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -41,12 +41,28 @@ starview_frontend/src/
 │   │   ├── BortleSkySlider/       # Interactive Bortle comparison slider
 │   │   │   ├── index.jsx
 │   │   │   └── styles.css
-│   │   └── DateNavigator/         # Date selection for calendar views
+│   │   ├── DateNavigator/         # Date selection for calendar views
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   ├── LocationChip/          # Tappable location indicator for sky page heroes
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   └── LocationModal/         # Full-screen modal for changing location
 │   │       ├── index.jsx
 │   │       └── styles.css
 │   ├── CookieConsent/             # GDPR/analytics cookie consent
 │   │   ├── index.jsx
 │   │   └── CookiePreferencesButton.jsx
+│   ├── home/                       # Home page components
+│   │   ├── HeroCarousel/           # Background image carousel (5 random location images)
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   ├── PopularNearby/          # Horizontal location carousel near user
+│   │   │   ├── index.jsx
+│   │   │   └── styles.css
+│   │   └── ProfileSetupCard/       # Onboarding card with profile completion progress
+│   │       ├── index.jsx
+│   │       └── styles.css
 │   ├── badges/                    # Badge-related components
 │   │   ├── BadgeCard/
 │   │   ├── BadgeCompact/
@@ -159,7 +175,8 @@ starview_frontend/src/
 │   └── AuthContext.jsx
 ├── contexts/
 │   ├── ToastContext.jsx           # Global toast notification system
-│   └── CookieConsentContext.jsx   # GDPR cookie consent state management
+│   ├── CookieConsentContext.jsx   # GDPR cookie consent state management
+│   └── LocationContext.jsx        # Unified location state for sky pages and explore
 ├── utils/
 │   ├── badges.js
 │   ├── geo.js                     # Distance calculation, formatting (Haversine)
@@ -258,7 +275,7 @@ Re-render
 | `api.js` | Axios client, CSRF, interceptors, 401 handling |
 | `auth.js` | Login, logout, registration, checkStatus |
 | `profile.js` | User profile, badges, favorites, social accounts (profileApi + publicUserApi) |
-| `locations.js` | Location CRUD |
+| `locations.js` | Location CRUD, hero carousel, popular nearby |
 | `moon.js` | Moon phase data (getPhases, getCurrentWeek, getCurrentMonth) |
 | `weather.js` | Weather data (getForecast, getForecastRange with date support) |
 | `bortle.js` | Bortle scale data (getBortle) |
@@ -274,17 +291,16 @@ Re-render
 | `usePinnedBadges.js` | Pinned badges state management |
 | `useProfileData.js` | React Query hook for profile data (badges, social accounts) |
 | `useStats.js` | React Query hook for platform statistics |
-| `useLocations.js` | React Query hooks: `useLocations` (infinite), `useLocationsPaginated` (desktop), `useToggleFavorite` |
+| `useLocations.js` | React Query hooks: `useLocations` (infinite), `useLocationsPaginated`, `usePopularNearby`, `useToggleFavorite` |
 | `useMapMarkers.js` | React Query hook for map GeoJSON with filter support; returns `{ geojson, markers, markerMap }` |
 | `useExploreData.js` | Unified data fetching for Explore page - automatically uses infinite (mobile) or paginated (desktop) |
 | `useAnimatedDropdown.js` | Dropdown state management with CSS close animation timing |
 | `useIntersectionObserver.js` | Viewport detection for infinite scroll triggers |
-| `useUserLocation.js` | Browser geolocation with profile location fallback, 30-min cache, source tracking |
+| `useUnits.js` | Distance/elevation unit formatting with user preference (imperial/metric), backend sync |
 | `useExploreFilters.js` | URL-based filter state for Explore page (search, type, rating, distance, verified, sort) |
 | `useMediaQuery.js` | CSS media query subscription; `useIsDesktop()` returns true at 1024px+ |
 | `useRequireAuth.js` | Auth guard for actions - redirects to login with return URL |
 | `useMapboxDirections.js` | Driving directions with cascade fallback (Mapbox -> ORS -> geodesic), LRU cache |
-| `useUnits.js` | Distance/elevation unit formatting with user preference (imperial/metric) |
 | `useMoonPhases.js` | Moon phase data hooks: `useMoonPhases`, `useTodayMoonPhase`, `useWeeklyMoonPhases`, `useMonthlyMoonPhases` |
 | `useWeather.js` | Weather data with source-aware responses (forecast/historical/historical_average) |
 | `useNighttimeWeather.js` | Optimized Tonight page hook - single API call for 6PM-6AM data |
@@ -306,6 +322,8 @@ Re-render
 | `WeatherGraphic` | Weather icon (clouds/sun/moon/rain based on conditions) |
 | `BortleSkySlider` | Interactive Bortle comparison slider showing sky quality differences |
 | `DateNavigator` | Date selection with prev/next/today navigation |
+| `LocationChip` | Tappable location indicator for sky page heroes, shows source icon |
+| `LocationModal` | Full-screen modal for changing location (search, recent, current) |
 
 ### Explore Page Components (`components/explore/`)
 
@@ -375,6 +393,8 @@ await locationsApi.getMapGeoJSON();   // GeoJSON FeatureCollection for Mapbox
 await locationsApi.markVisited(id);   // Check-in to location
 await locationsApi.unmarkVisited(id); // Remove check-in
 await locationsApi.toggleFavorite(id); // Toggle favorite (add/remove)
+await locationsApi.getHeroCarousel(); // Random images for home hero (daily rotation)
+await locationsApi.getPopularNearby({ lat, lng, limit }); // Top-rated locations nearby
 
 // Profile (authenticated user)
 await profileApi.getMe();
@@ -434,6 +454,36 @@ function SomeForm({ onSuccess }) {
 ---
 
 ## State Management
+
+### LocationContext
+Unified location management for sky pages (Tonight, Weather, Bortle) and Explore page.
+
+```javascript
+import { useLocation } from '../contexts/LocationContext';
+
+function MyComponent() {
+  const {
+    location,              // Current active location (changes with search)
+    actualLocation,        // User's real location (stable, from IP/browser only)
+    source,                // 'browser' | 'ip' | 'search'
+    isLoading,
+    permissionState,       // 'granted' | 'denied' | 'prompt' | null
+    recentLocations,       // Last 5 searched locations (localStorage)
+    setLocation,           // (lat, lng, name, source) => void
+    requestCurrentLocation, // Triggers browser geolocation
+    clearLocation,         // Reset to IP fallback
+  } = useLocation();
+}
+```
+
+**Resolution order:**
+1. sessionStorage (existing active location)
+2. Browser geolocation (if permission granted)
+3. IP geolocation (`/api/geolocate/`)
+
+**Two location states:**
+- `location`: Current active location (changes with search/selection)
+- `actualLocation`: User's real location (stable, for "near you" features)
 
 ### ToastContext
 Global toast notification system for displaying user feedback.

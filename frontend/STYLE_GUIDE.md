@@ -1,6 +1,6 @@
 # Starview Frontend Style Guide
 
-**Last Updated:** 2026-01-13
+**Last Updated:** 2026-01-24
 **Design System:** Observatory-themed glass-morphism (cyan/teal accent)
 **Source of Truth:** `starview_frontend/src/styles/global.css`
 
@@ -25,6 +25,7 @@
 | Empty state | `.empty-state`, `.empty-state__icon`, `.empty-state__title` |
 | Password toggle | `.password-toggle` |
 | Section divider | `.section-divider` |
+| Section accent (subtitle) | `.section-accent` |
 | Loading spinner | `<LoadingSpinner />` component |
 | Toast notification | `useToast()` hook from `ToastContext` |
 
@@ -219,11 +220,14 @@ border-radius: calc(var(--radius) / 2);          /* 4px - small elements */
 border-radius: var(--radius-full);               /* Pills, circles */
 ```
 
-### Transitions & Z-Index
+### Transitions, Animation & Z-Index
 
 ```css
 /* Transition Duration */
 --transition: 0.15s;
+
+/* Animation Duration (for fadeInUp, etc.) */
+--animation-duration: 0.25s;
 
 /* Z-Index Scale */
 --z-navbar: 30;
@@ -344,7 +348,7 @@ Use for authentication pages (login, register, password reset, etc.).
 - `max-width: 420px` with `width: 100%`
 - `padding: var(--space-xl)`
 - `text-align: center` - all content centered by default
-- `animation: fadeInUp 0.4s ease-out backwards` - entrance animation
+- `animation: fadeInUp var(--animation-duration) ease-out backwards` - entrance animation
 
 **Note:** Combine `.auth-page__card` with `.glass-card` for the glass-morphism effect.
 
@@ -494,6 +498,27 @@ Use for authentication pages (login, register, password reset, etc.).
 - `.section-divider__line`: 1px glass border color
 - `.section-divider__text`: `--text-xs`, muted, lowercase
 
+### Section Accent
+
+Subtle accent subtitle for section headers with observatory "coordinate readout" aesthetic.
+
+```jsx
+// Left-aligned (default)
+<span className="section-accent">Explore</span>
+
+// Centered variant
+<span className="section-accent section-accent--centered">Featured</span>
+
+// Light variant (for accent backgrounds)
+<span className="section-accent section-accent--light">Discover</span>
+```
+
+**Section accent specs:**
+- `.section-accent`: inline-flex, technical font, `--text-2xs`, uppercase, 0.2em letter-spacing
+- Gradient line before text (24px wide, cyan glow)
+- `.section-accent--centered`: removes left line, adds right line instead
+- `.section-accent--light`: white text for use on accent-colored backgrounds
+
 ### Typography Utilities
 
 ```jsx
@@ -571,7 +596,7 @@ Elements fade in while sliding up 20px:
 
 | Class | Effect |
 |-------|--------|
-| `.animate-fade-in-up` | Fade in + 20px upward motion (0.6s ease-out) |
+| `.animate-fade-in-up` | Fade in + 20px upward motion (uses `--animation-duration`, default 0.25s) |
 | `.animate-delay-1` | 0.1s delay |
 | `.animate-delay-2` | 0.2s delay |
 | `.animate-delay-3` | 0.3s delay |
