@@ -224,12 +224,14 @@ GET /health/                       - DB, cache, Celery status
 ### Sitemaps (`sitemaps.py`)
 ```
 GET /sitemap.xml                   - XML sitemap index for search engines
+GET /llms.txt                      - AI language model context (llmstxt.org spec)
 ```
-- **StaticViewSitemap:** Homepage and key pages (/, /explore, /sky, /tonight, /bortle, /moon, /weather)
-- **LegalPageSitemap:** Legal pages (/terms, /privacy, /accessibility, /ccpa)
+- **StaticViewSitemap:** Homepage and content pages (/, /explore, /sky, /tonight, /bortle, /moon, /weather)
 - **UserProfileSitemap:** Public user profiles (priority 0.6, limit 1000)
+- **Excluded:** Legal/utility pages (/terms, /privacy, /login, etc.) - not indexed
 - Improves SEO and Google AI Overviews visibility
 - Only exposes public URLs - no sensitive data
+- **llms.txt:** Markdown file helping AI assistants understand the site (see `.claude/rules/seo.md`)
 
 ---
 

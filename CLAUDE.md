@@ -17,6 +17,7 @@ Path-specific rules are loaded automatically from `.claude/rules/`:
 - `testing.md` - Testing patterns
 - `security.md` - Security requirements (always loaded)
 - `git-conventions.md` - Commit and PR standards
+- `seo.md` - SEO, sitemap, robots.txt, and llms.txt maintenance
 
 ## Auto-Documentation System
 
