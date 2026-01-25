@@ -8,6 +8,12 @@ model: sonnet
 
 # Starview Product Lab
 
+> **⚠️ Prerequisite:** This skill requires UX research data in `.claude/ux-research/`.
+> If this directory doesn't exist, you'll need to:
+> 1. Create `.claude/ux-research/` directory
+> 2. Add research files (e.g., `gemini-output-pain-points-*.md`, `gemini-output-competitors-*.md`)
+> 3. Or conduct user research first and document findings there
+
 An automated product validation pipeline. Speak naturally about what you want to explore, and Claude will:
 1. Analyze your intent
 2. Extract relevant research via subagents

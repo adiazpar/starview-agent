@@ -483,18 +483,19 @@ starview_app/
 │       └── model_email_suppressionlist.py  # 7K lines
 ├── views/
 │   ├── views_auth.py          # 827 lines - auth endpoints
-│   ├── views_location.py      # 987 lines - location CRUD + check-ins + hero_carousel + popular_nearby
-│   ├── views_review.py        # 400 lines - review/comment CRUD
-│   ├── views_user.py          # 647 lines - profile management
 │   ├── views_badge.py         # 225 lines - badge endpoints
-│   ├── views_follow.py        # 176 lines - follow/unfollow system
-│   ├── views_favorite.py      # 71 lines - favorite locations
-│   ├── views_stats.py         # 85 lines - platform statistics
-│   ├── views_webhooks.py      # 396 lines - AWS SNS handlers
-│   ├── views_health.py        # 129 lines - health check endpoint
 │   ├── views_bortle.py        # 235 lines - Bortle scale / light pollution API
-│   ├── views_geoip.py         # 65 lines - IP geolocation (Cloudflare headers)
-│   └── views_routing.py       # 85 lines - directions proxy (ORS API key protection)
+│   ├── views_comment.py       # Comment CRUD endpoints
+│   ├── views_favorite.py      # 71 lines - favorite locations
+│   ├── views_follow.py        # 176 lines - follow/unfollow system
+│   ├── views_health.py        # 129 lines - health check endpoint
+│   ├── views_location.py      # 987 lines - location CRUD + check-ins + hero_carousel + popular_nearby
+│   ├── views_moon.py          # Moon phase API endpoint
+│   ├── views_review.py        # 400 lines - review CRUD
+│   ├── views_stats.py         # 85 lines - platform statistics
+│   ├── views_user.py          # 647 lines - profile management
+│   ├── views_vote.py          # Generic voting endpoints
+│   └── views_weather.py       # Weather forecast API endpoint
 ├── services/
 │   ├── badge_service.py       # Badge checking/awarding logic
 │   ├── location_service.py    # Mapbox enrichment
@@ -522,17 +523,20 @@ starview_app/
 │   └── session_timeout.py     # Session idle timeout (30-min default)
 ├── sitemaps.py                    # XML sitemaps for SEO
 └── management/commands/
-    ├── cleanup_unverified_users.py
-    ├── cleanup_email_suppressions.py
     ├── archive_audit_logs.py          # Archive old audit logs (R2 in prod, local in dev)
-    ├── cleanup_audit_archives.py      # Delete old R2 archives (privacy compliance)
     ├── audit_badges.py
     ├── award_pioneer_badges.py
+    ├── backfill_bortle.py             # Backfill Bortle values for existing locations
+    ├── backfill_descriptions.py       # Backfill descriptions via AI
+    ├── backfill_photo_dimensions.py   # Backfill photo width/height metadata
+    ├── cleanup_audit_archives.py      # Delete old R2 archives (privacy compliance)
+    ├── cleanup_email_suppressions.py
+    ├── cleanup_unverified_users.py
+    ├── diagnose_db.py
+    ├── enrich_locations.py            # Re-enrich with Mapbox geocoding/elevation
     ├── seed_locations.py
-    ├── enrich_locations.py         # Re-enrich with Mapbox geocoding/elevation
-    ├── warm_cache.py               # Pre-warm Redis caches after deployment
     ├── setup_google_oauth.py
-    └── diagnose_db.py
+    └── warm_cache.py                  # Pre-warm Redis caches after deployment
 ```
 
 ---

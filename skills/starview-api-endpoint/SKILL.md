@@ -3,7 +3,7 @@ name: starview-api-endpoint
 description: Create or integrate API endpoints end-to-end. Use when adding new endpoints, connecting frontend to existing APIs, or resuming interrupted endpoint work. Handles backend (DRF) and frontend (services, React Query) integration with crash recovery support.
 user-invocable: true
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, EnterPlanMode, ExitPlanMode, AskUserQuestion, TodoWrite
-model: sonnet
+model: opus
 ---
 
 # API Endpoint Skill for Starview
@@ -105,7 +105,7 @@ Skip this section if backend already exists.
 
 ### Step 1: Model (If Needed)
 
-If endpoint requires a new model, add to `starview_app/models.py`:
+If endpoint requires a new model, create a file in `starview_app/models/` (e.g., `feature.py`) and export it in `__init__.py`:
 
 ```python
 class FeatureName(models.Model):
@@ -131,7 +131,7 @@ djvenv/bin/python manage.py migrate
 
 ### Step 2: Serializer
 
-Add to `starview_app/serializers.py` (or create `starview_app/serializers_feature.py` for large features):
+Create a file in `starview_app/serializers/` (e.g., `feature_serializers.py`) and export in `__init__.py`:
 
 ```python
 class FeatureNameSerializer(serializers.ModelSerializer):
@@ -155,7 +155,7 @@ class FeatureNameDetailSerializer(FeatureNameSerializer):
 
 ### Step 3: View/ViewSet
 
-Add to `starview_app/views.py` (or `starview_app/views_feature.py`):
+Create a view file in `starview_app/views/` (e.g., `views_feature.py`) and export in `__init__.py`:
 
 ```python
 class FeatureNameViewSet(viewsets.ModelViewSet):
@@ -187,7 +187,7 @@ class FeatureNameViewSet(viewsets.ModelViewSet):
 
 ### Step 4: Rate Limiting
 
-Choose appropriate throttle class from `starview_app/throttling.py`:
+Choose appropriate throttle class from `starview_app/utils/throttles.py`:
 
 | Throttle Class | Rate | Use For |
 |----------------|------|---------|
@@ -437,19 +437,20 @@ Update `.claude/frontend/docs/API_GUIDE.md`:
 
 ## Quick Reference: Existing Patterns
 
-### Backend Files
-- Models: `starview_app/models.py`
-- Serializers: `starview_app/serializers.py`
-- Views: `starview_app/views.py`, `views_auth.py`, `views_profile.py`
+### Backend Files (Directory Structure)
+- Models: `starview_app/models/` (e.g., `user.py`, `location.py`, `review.py`, `badge.py`)
+- Serializers: `starview_app/serializers/` (e.g., `location_serializers.py`, `user_serializers.py`)
+- Views: `starview_app/views/` (e.g., `views_location.py`, `views_auth.py`, `views_user.py`)
 - URLs: `starview_app/urls.py`
-- Throttling: `starview_app/throttling.py`
-- Permissions: `starview_app/permissions.py`
+- Throttling: `starview_app/utils/throttles.py`
+- Services: `starview_app/services/` (e.g., `badge_service.py`, `mapbox_service.py`)
 
 ### Frontend Files
 - API client: `services/api.js`
 - Auth service: `services/auth.js`
 - Profile service: `services/profile.js`
-- Hooks: `hooks/useProfileData.js`, `hooks/useStats.js`
+- Locations service: `services/locations.js`
+- Hooks: `hooks/useProfileData.js`, `hooks/useStats.js`, `hooks/useLocations.js`
 
 ### Documentation
 - Backend: `.claude/backend/ARCHITECTURE.md`

@@ -283,6 +283,110 @@ Get weather data for a location with automatic source selection based on date.
 
 ---
 
+#### `GET /api/moon-phases/`
+Get moon phase data for a date range.
+
+**Authentication:** Not required
+**Cache:** 30 days (moon phases are deterministic)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `start_date` | string | Yes | Start date (YYYY-MM-DD) |
+| `end_date` | string | Yes | End date (YYYY-MM-DD) |
+
+**Success Response (200):**
+```json
+{
+  "phases": [
+    {
+      "date": "2026-01-25",
+      "phase": "waxing_crescent",
+      "illumination": 0.15,
+      "age_days": 4.2,
+      "moon_rise": "10:30",
+      "moon_set": "22:15"
+    }
+  ]
+}
+```
+
+**Frontend Service:** `moonApi.getMoonPhases({ startDate, endDate })`
+
+**Frontend Hook:** `useMoonPhases({ startDate, endDate })`
+
+---
+
+#### `GET /api/geolocate/`
+Get approximate location from IP address (via Cloudflare headers).
+
+**Authentication:** Not required
+**Cache:** None (dynamic based on client IP)
+
+**Success Response (200):**
+```json
+{
+  "latitude": 37.7749,
+  "longitude": -122.4194,
+  "city": "San Francisco",
+  "region": "California",
+  "country": "US",
+  "timezone": "America/Los_Angeles"
+}
+```
+
+**Error Response (404):**
+```json
+{
+  "error": "not_found",
+  "message": "Could not determine location from IP address.",
+  "status_code": 404
+}
+```
+
+**Use Case:** Initial map centering, default location for weather/sky data
+
+---
+
+#### `GET /api/directions/`
+Get driving directions between two points (proxied through backend to protect API keys).
+
+**Authentication:** Not required
+**Cache:** 24 hours (routes rarely change)
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `origin_lat` | number | Yes | Origin latitude |
+| `origin_lng` | number | Yes | Origin longitude |
+| `dest_lat` | number | Yes | Destination latitude |
+| `dest_lng` | number | Yes | Destination longitude |
+
+**Success Response (200):**
+```json
+{
+  "distance_meters": 45000,
+  "duration_seconds": 2700,
+  "geometry": "encoded_polyline_string",
+  "source": "openrouteservice"
+}
+```
+
+**Error Response (503):**
+```json
+{
+  "error": "service_unavailable",
+  "message": "Directions service temporarily unavailable.",
+  "status_code": 503
+}
+```
+
+**Frontend Service:** `directionsApi.getDirections({ originLat, originLng, destLat, destLng })`
+
+**Frontend Hook:** `useMapboxDirections()` (with cascading fallback: Mapbox → OpenRouteService → geodesic)
+
+---
+
 ### Authentication Endpoints
 
 #### `POST /api/auth/register/`
@@ -2648,6 +2752,7 @@ All API endpoints are accessed through service modules in `starview_frontend/src
 - **`weather.js`** - Weather data (`weatherApi`)
 - **`bortle.js`** - Bortle scale/light pollution (`bortleApi`)
 - **`moon.js`** - Moon phase data (`moonApi`)
+- **`directions.js`** - Directions proxy (`directionsApi`)
 
 **Example Import:**
 ```javascript
@@ -2657,4 +2762,5 @@ import { profileApi, publicUserApi } from './services/profile';
 import statsApi from './services/stats';
 import weatherApi from './services/weather';
 import bortleApi from './services/bortle';
+import directionsApi from './services/directions';
 ```

@@ -173,12 +173,11 @@ starview_frontend/src/
 │   ├── weather.js                 # Weather API (getForecast, getForecastRange)
 │   ├── bortle.js                  # Bortle scale API
 │   └── stats.js
-├── context/
-│   └── AuthContext.jsx
 ├── contexts/
-│   ├── ToastContext.jsx           # Global toast notification system
+│   ├── AuthContext.jsx            # Authentication state management
 │   ├── CookieConsentContext.jsx   # GDPR cookie consent state management
-│   └── LocationContext.jsx        # Unified location state for sky pages and explore
+│   ├── LocationContext.jsx        # Unified location state for sky pages and explore
+│   └── ToastContext.jsx           # Global toast notification system
 ├── utils/
 │   ├── badges.js
 │   ├── geo.js                     # Distance calculation, formatting (Haversine)
@@ -353,6 +352,7 @@ Re-render
 | `/profile` | Profile | **Yes** | ProtectedRoute |
 | `/users/:username` | PublicProfile | No | - |
 | `/explore` | Explore | No | - |
+| `/locations/:id` | LocationDetail | No | - |
 | `/sky` | Sky (hub page) | No | - |
 | `/tonight` | Tonight (Sky Score) | No | - |
 | `/bortle` | Bortle (educational) | No | - |
@@ -515,7 +515,7 @@ function MyComponent() {
 Global authentication state using React Context API.
 
 ```javascript
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 function MyComponent() {
   const { isAuthenticated, user, loading, logout, refreshAuth } = useAuth();
