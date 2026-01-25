@@ -43,9 +43,8 @@ Pause and ask the user if they want to run `/update-docs` before proceeding.
 | `starview-badge-creator` | Adding new badges to the badge system |
 | `starview-api-endpoint` | Full-stack API: DRF backend + frontend services + React Query |
 | `starview-product-lab` | Feature ideation, product validation, competitive analysis, identity refinement |
-| `generate-descriptions` | Backfill observatory descriptions using sub-agents with web research |
 | `frontend-engineer` | Create distinctive, production-grade frontend interfaces. Use for web components, dashboards, React components, HTML/CSS layouts. Combines design thinking with systematic engineering (typography, color algorithms, cognitive UX laws). |
-| `seed-observatories` | Seed observatory locations from Wikidata with AI-validated images. Orchestrated pipeline with sub-agents for image validation via Chrome DevTools MCP. |
+| `seed-observatories` | Seed observatory locations from Wikidata with AI-validated images. Orchestrated pipeline with sub-agents for image validation via Chrome DevTools MCP. Includes optional description generation step. |
 
 **Auto-invoke triggers:**
 - "create a badge", "new badge", "add a badge" → Enter plan mode, then run `/create-badge`

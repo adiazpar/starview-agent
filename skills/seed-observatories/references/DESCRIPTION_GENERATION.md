@@ -1,47 +1,53 @@
----
-name: generate-descriptions
-description: Generate descriptions for observatory locations. Reads validated_observatories.json and creates observatory_descriptions.json with AI-generated descriptions for each location.
----
+# Observatory Description Generation
 
-# Observatory Description Generator
+Generate research-backed descriptions for seeded observatories using web search and sub-agents.
 
-Generate research-backed descriptions for observatory locations using web search and sub-agents.
+**When to use:** After running the seed-observatories pipeline, if you want to add rich descriptions to the validated observatories.
 
 ## Architecture
 
-This skill uses a **sub-agent pattern** to preserve main conversation context:
+This workflow uses a **sub-agent pattern** to preserve main conversation context:
 
 ```
 Main Chat (Orchestrator)
     │
-    └── Task: Explore/Research Agent (batch processor)
+    └── Task: Research Agent (batch processor)
             │
             ├── WebSearch: "{observatory name} observatory"
             ├── WebFetch: Wikipedia/official site
-            └── Write: Append to output JSON
+            └── Returns: index + description pairs
 ```
 
-## Execution Instructions
+## Execution Steps
 
 ### Step 1: Read Source Data
 
-First, read the observatory list:
+Read the observatory list:
 
+```python
+import json
+with open('seed_data/validated_observatories.json') as f:
+    data = json.load(f)
+    observatories = data['observatories']
+print(f"Found {len(observatories)} observatories")
 ```
-Read: seed_data/validated_observatories.json
-```
-
-Extract the list of observatory names that need descriptions.
 
 ### Step 2: Check for Existing Progress
 
-Check if `seed_data/observatory_descriptions.json` already exists with partial progress:
+Check if `seed_data/observatory_descriptions.json` already exists:
 
+```python
+from pathlib import Path
+existing = Path('seed_data/observatory_descriptions.json')
+if existing.exists():
+    with open(existing) as f:
+        done = json.load(f)
+    completed_names = {d['name'] for d in done['descriptions']}
+    remaining = [o for o in observatories if o['name'] not in completed_names]
+    print(f"Already have {len(completed_names)} descriptions, {len(remaining)} remaining")
+else:
+    remaining = observatories
 ```
-Read: seed_data/observatory_descriptions.json (if exists)
-```
-
-If it exists, identify which observatories still need descriptions.
 
 ### Step 3: Spawn Sub-Agent for Batch Processing
 
@@ -111,7 +117,7 @@ The complete file should have this structure:
       "name": "Lick Observatory",
       "latitude": 37.3414,
       "longitude": -121.6429,
-      "description": "Founded in 1888 atop Mount Hamilton in California, Lick Observatory was the first permanently occupied mountaintop observatory in the world. Home to the historic 36-inch Great Lick Refractor, it has contributed to discoveries including numerous moons of Jupiter and early exoplanet detection. The site's 4,265-foot elevation provides excellent seeing conditions and remains active for research and public programs.",
+      "description": "Founded in 1888 atop Mount Hamilton...",
       "sources": ["wikipedia", "ucolick.org"]
     }
   ]
@@ -170,7 +176,7 @@ If web search returns nothing useful:
 
 ## Resume Support
 
-The skill supports resumption:
+The workflow supports resumption:
 1. Check existing `observatory_descriptions.json` for completed entries
 2. Skip already-processed observatories
 3. Continue from where it left off
@@ -187,13 +193,3 @@ print(f'Total descriptions: {len(d[\"descriptions\"])}')
 print(f'Sample: {d[\"descriptions\"][0][\"name\"]}: {d[\"descriptions\"][0][\"description\"][:100]}...')
 "
 ```
-
-## Orchestrator Commands
-
-The main chat orchestrator should:
-
-1. **Initialize**: Read observatory list, check for existing progress
-2. **Loop**: Spawn sub-agents for each batch of 50
-3. **Merge**: Combine results after each batch
-4. **Report**: Show progress (e.g., "Completed 150/946 observatories")
-5. **Finalize**: Write complete JSON file when done

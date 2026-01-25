@@ -478,10 +478,25 @@ The seeder:
 
 ### Step 6: Display Final Metrics
 
-Display a summary of the seeding process. **Read `METRICS_TEMPLATES.md`** for the full templates.
+Display a summary of the seeding process. **Read `references/METRICS_TEMPLATES.md`** for the full templates.
 
 - Use "prepare-only" template if `--prepare-only` flag was set
 - Use "full seeding" template if database was updated
+
+---
+
+### Step 7 (Optional): Generate Descriptions
+
+After seeding completes, ask the user if they want to generate descriptions for the observatories:
+
+> "Would you like to generate AI-researched descriptions for these observatories? This uses web search to create 2-4 sentence descriptions with founding dates, notable instruments, and current status."
+
+If yes, **read `references/DESCRIPTION_GENERATION.md`** and follow its workflow to:
+1. Spawn research sub-agents (Haiku, batches of 50)
+2. Web search each observatory for history/details
+3. Merge descriptions into `seed_data/observatory_descriptions.json`
+
+This step is independent and can also be run later by asking: "Generate descriptions for the seeded observatories."
 
 ---
 
@@ -519,7 +534,7 @@ The skill automatically:
 
 ## Troubleshooting
 
-**Read `TROUBLESHOOTING.md`** for common issues and solutions:
+**Read `references/TROUBLESHOOTING.md`** for common issues and solutions:
 - Sub-agent uses different output format
 - Checkpoint missing validation data
 - Sub-agent doesn't create checkpoint

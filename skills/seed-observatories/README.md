@@ -59,11 +59,12 @@ results = search_wikimedia_commons("Keck Observatory")
 ```
 seed-observatories/
 ├── SKILL.md                 # Claude Code skill documentation
-├── TROUBLESHOOTING.md       # Common issues and solutions
-├── METRICS_TEMPLATES.md     # Output display templates
-├── normalize_checkpoint.py  # Checkpoint normalization script
-├── pyproject.toml           # Python package configuration
 ├── README.md                # This file
+├── pyproject.toml           # Python package configuration
+├── references/              # Supplementary documentation
+│   ├── DESCRIPTION_GENERATION.md  # Optional description workflow
+│   ├── METRICS_TEMPLATES.md       # Output display templates
+│   └── TROUBLESHOOTING.md         # Common issues and solutions
 └── observatory_seeder/      # Python package
     ├── __init__.py          # Public API
     ├── config.py            # Configuration constants
@@ -71,7 +72,8 @@ seed-observatories/
     ├── download.py          # Image downloading
     ├── run.py               # CLI entry point
     ├── url_validator.py     # URL validation with soft 404 detection
-    └── validate.py          # Validation utilities
+    ├── validate.py          # Validation utilities
+    └── normalize_checkpoint.py  # Checkpoint normalization script
 ```
 
 ## Features
