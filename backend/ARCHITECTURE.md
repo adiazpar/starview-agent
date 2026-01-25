@@ -1,6 +1,6 @@
 # Backend Architecture Guide
 
-**Last Updated:** 2026-01-24 | **Status:** 98% Complete | **Production:** https://starview.app
+**Last Updated:** 2026-01-25 | **Status:** 98% Complete | **Production:** https://starview.app
 
 ---
 
@@ -207,6 +207,15 @@ GET  /api/geolocate/              - Get approximate location from IP address
      Development: Returns San Francisco as fallback
 ```
 
+### Directions Proxy (`views/views_routing.py`)
+```
+GET  /api/directions/             - Proxy to OpenRouteService directions API
+     ?origin=<lat,lng>            - Starting coordinates (required)
+     ?destination=<lat,lng>       - Ending coordinates (required)
+     Response: GeoJSON with route geometry and summary
+     Security: API key kept server-side, rate-limited via AnonRateThrottle
+```
+
 ### Health (`views/views_health.py`)
 ```
 GET /health/                       - DB, cache, Celery status
@@ -301,6 +310,7 @@ The badge award/revoke logic and progress display automatically adapt to new req
 - **Password reset:** Secure tokens, 1-hour expiry
 - **Google OAuth:** Social login support
 - **React SPA integration:** Custom adapters redirect allauth HTML pages to React frontend
+- **Session idle timeout:** 30-minute inactivity timeout (configurable via `SESSION_IDLE_TIMEOUT`)
 
 ### Input Validation (`utils/validators.py`)
 - File upload: 5MB max, extension whitelist, MIME check, Pillow verification
@@ -371,6 +381,9 @@ cleanup_email_suppressions            # Weekly bounce/complaint cleanup
   --report                            #   Generate health report to stdout
   --email-report user@example.com     #   Email weekly report
 archive_audit_logs --days 30          # Archive old audit logs to R2
+  --archive-dir PATH                  #   Local directory (development)
+  --format json|txt|both              #   Output format (default: both)
+cleanup_audit_archives --days 90      # Delete old R2 archives (privacy compliance)
 
 # Badge System
 audit_badges                          # Audit badge system integrity
@@ -480,7 +493,8 @@ starview_app/
 │   ├── views_webhooks.py      # 396 lines - AWS SNS handlers
 │   ├── views_health.py        # 129 lines - health check endpoint
 │   ├── views_bortle.py        # 235 lines - Bortle scale / light pollution API
-│   └── views_geoip.py         # 65 lines - IP geolocation (Cloudflare headers)
+│   ├── views_geoip.py         # 65 lines - IP geolocation (Cloudflare headers)
+│   └── views_routing.py       # 85 lines - directions proxy (ORS API key protection)
 ├── services/
 │   ├── badge_service.py       # Badge checking/awarding logic
 │   ├── location_service.py    # Mapbox enrichment
@@ -504,11 +518,14 @@ starview_app/
 │   ├── exception_handler.py   # DRF error handling
 │   ├── adapters.py            # django-allauth customization (React redirects, OAuth adapters)
 │   └── cache.py               # Redis cache keys, version-based invalidation
+├── middleware/
+│   └── session_timeout.py     # Session idle timeout (30-min default)
 ├── sitemaps.py                    # XML sitemaps for SEO
 └── management/commands/
     ├── cleanup_unverified_users.py
     ├── cleanup_email_suppressions.py
-    ├── archive_audit_logs.py
+    ├── archive_audit_logs.py          # Archive old audit logs (R2 in prod, local in dev)
+    ├── cleanup_audit_archives.py      # Delete old R2 archives (privacy compliance)
     ├── audit_badges.py
     ├── award_pioneer_badges.py
     ├── seed_locations.py
@@ -548,7 +565,11 @@ DEFAULT_FROM_EMAIL=noreply@starview.app
 
 # External APIs
 MAPBOX_TOKEN=...
+OPENROUTE_SERVICE_API_KEY=...         # Directions API (fallback for navigation)
 DISABLE_EXTERNAL_APIS=False
+
+# Security
+SESSION_IDLE_TIMEOUT=1800             # Session idle timeout in seconds (default: 30 min)
 
 # Optional
 CELERY_ENABLED=False  # True for async tasks

@@ -1,7 +1,7 @@
 # Frontend Architecture Guide
 
 **Stack:** React 19 + Vite + TanStack Query + Django REST Backend
-**Last Updated:** 2026-01-24 (Sprint 11)
+**Last Updated:** 2026-01-25 (Sprint 12)
 **Status:** Folder-Based Architecture (Industry Standard)
 
 ---
@@ -161,12 +161,14 @@ starview_frontend/src/
 │   ├── useIntersectionObserver.js # Viewport detection for infinite scroll
 │   ├── useUserLocation.js         # Browser geolocation with profile location fallback
 │   ├── useMediaQuery.js           # CSS media query detection (useIsDesktop helper)
-│   └── useRequireAuth.js          # Auth guard - redirects to login with return URL
+│   ├── useRequireAuth.js          # Auth guard - redirects to login with return URL
+│   └── useUnits.js                # Unit preference (metric/imperial) with backend sync
 ├── services/                      # Flat - no folders
 │   ├── api.js
 │   ├── auth.js
 │   ├── profile.js
 │   ├── locations.js
+│   ├── directions.js              # Backend directions proxy (ORS fallback)
 │   ├── moon.js                    # Moon phase API calls
 │   ├── weather.js                 # Weather API (getForecast, getForecastRange)
 │   ├── bortle.js                  # Bortle scale API
@@ -181,7 +183,8 @@ starview_frontend/src/
 │   ├── badges.js
 │   ├── geo.js                     # Distance calculation, formatting (Haversine)
 │   ├── navigation.js              # Duration formatting, navigation app deep links, geocoding
-│   └── units.js                   # Unit formatting with user preference support
+│   ├── units.js                   # Unit formatting with user preference support
+│   └── security.js                # Open redirect prevention (isValidRedirect, safeRedirect)
 ├── styles/
 │   └── global.css                 # All design tokens, reset, and shared styles
 ├── App.jsx                        # Routes only
@@ -276,6 +279,7 @@ Re-render
 | `auth.js` | Login, logout, registration, checkStatus |
 | `profile.js` | User profile, badges, favorites, social accounts (profileApi + publicUserApi) |
 | `locations.js` | Location CRUD, hero carousel, popular nearby |
+| `directions.js` | Backend directions proxy (ORS API protected server-side) |
 | `moon.js` | Moon phase data (getPhases, getCurrentWeek, getCurrentMonth) |
 | `weather.js` | Weather data (getForecast, getForecastRange with date support) |
 | `bortle.js` | Bortle scale data (getBortle) |

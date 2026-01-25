@@ -21,6 +21,7 @@ Pause and ask the user if they want to run `/update-docs` before proceeding.
 - `docs/CELERY_GUIDE.md` - Async tasks (FREE vs PAID tier)
 - `docs/STORAGE_CONFIGURATION.md` - Cloudflare R2 media storage
 - `docs/LOGGING_GUIDE.md` - Python logging best practices
+- `docs/RENDER_CRON_SETUP.md` - Production cron jobs (cleanup, archival)
 - `docs/badge_system/` - Badge system deep dive
 - `docs/email_monitoring/` - AWS SES bounce/complaint tracking
 
@@ -29,6 +30,7 @@ Pause and ask the user if they want to run `/update-docs` before proceeding.
 - `STYLE_GUIDE.md` - Design system (colors, typography, spacing)
 - `docs/API_GUIDE.md` - Frontend API endpoint reference
 - `docs/MCP_WORKFLOW.md` - Browser automation for visual development
+- `docs/PMTILES_GUIDE.md` - PMTiles + Cloudflare R2 for light pollution tiles
 - `references/` - Design inspiration and baseline screenshots
 
 **When to read frontend docs:** Any frontend work, component creation, routing, styling
@@ -42,12 +44,15 @@ Pause and ask the user if they want to run `/update-docs` before proceeding.
 | `starview-api-endpoint` | Full-stack API: DRF backend + frontend services + React Query |
 | `starview-product-lab` | Feature ideation, product validation, competitive analysis, identity refinement |
 | `generate-descriptions` | Backfill observatory descriptions using sub-agents with web research |
+| `frontend-engineer` | Create distinctive, production-grade frontend interfaces. Use for web components, dashboards, React components, HTML/CSS layouts. Combines design thinking with systematic engineering (typography, color algorithms, cognitive UX laws). |
+| `seed-observatories` | Seed observatory locations from Wikidata with AI-validated images. Orchestrated pipeline with sub-agents for image validation via Chrome DevTools MCP. |
 
 **Auto-invoke triggers:**
 - "create a badge", "new badge", "add a badge" → Enter plan mode, then run `/create-badge`
 - "brainstorm features", "what should we build", "product direction" → Use `starview-product-lab` skill
+- "seed observatories", "add observatories" → Use `seed-observatories` skill
 
-## UX Research (`.claude/ux-research/`)
+## UX Research (`.claude/skills/starview-product-lab/ux-research/`)
 
 Gemini Deep Research reports for product decisions. **Dynamic discovery** - new files are automatically detected.
 
@@ -78,6 +83,8 @@ Two MCP servers for visual frontend development. See `docs/MCP_WORKFLOW.md` for 
 | **chrome-devtools** | Console logs, network requests, performance analysis |
 
 **IMPORTANT:** Chrome DevTools MCP uses `uid` values from the accessibility tree, NOT CSS selectors. Always call `take_snapshot()` first to get element `uid` values.
+
+**URL:** Always use `http://localhost:5173` when navigating with Chrome DevTools MCP (Vite dev server).
 
 ## Environment Configuration
 
@@ -131,7 +138,7 @@ git push
 
 **Python Environment:** Always use `djvenv/bin/python`
 
-**Server:** Always running at http://127.0.0.1:8000/
+**Dev Servers:** Django (port 8000) and Vite (port 5173) are always running in a separate terminal. Do not start them.
 
 **Celery Worker:** `djvenv/bin/celery -A django_project worker --loglevel=info`
 

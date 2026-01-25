@@ -62,7 +62,8 @@ The agent configuration lives in a separate repository for several reasons:
 │   ├── STYLE_GUIDE.md           # Design system (colors, typography)
 │   └── docs/
 │       ├── API_GUIDE.md         # Frontend API reference
-│       └── MCP_WORKFLOW.md      # Browser automation guide
+│       ├── MCP_WORKFLOW.md      # Browser automation guide
+│       └── PMTILES_GUIDE.md     # Light pollution tiles via R2
 │
 ├── hooks/                       # Automation scripts
 │   ├── track-changes.sh         # Logs file modifications
@@ -76,7 +77,11 @@ The agent configuration lives in a separate repository for several reasons:
 │
 └── skills/                      # Complex workflow guides
     ├── starview-api-endpoint/   # Full-stack API development
-    └── starview-badge-creator/  # Badge system integration
+    ├── starview-badge-creator/  # Badge system integration
+    ├── starview-product-lab/    # Product validation, UX research
+    ├── frontend-engineer/       # Design engineering (11 reference files)
+    ├── generate-descriptions/   # AI-generated observatory descriptions
+    └── seed-observatories/      # Wikidata observatory seeding pipeline
 ```
 
 ---
@@ -134,6 +139,10 @@ Complex workflows invoked via the Skill tool:
 |-------|-------------|
 | `starview-api-endpoint` | Building new API endpoints (backend + frontend) |
 | `starview-badge-creator` | Adding badges to the achievement system |
+| `starview-product-lab` | Feature ideation, product validation, competitive analysis |
+| `frontend-engineer` | Distinctive frontend interfaces with design engineering |
+| `generate-descriptions` | AI-generated descriptions for observatory locations |
+| `seed-observatories` | Seed observatories from Wikidata with AI image validation |
 
 ---
 
@@ -255,4 +264,7 @@ cat .claude/hooks/.session-changes.log
 | Add API endpoint | Skill: `starview-api-endpoint` |
 | Add badge | Command: `/create-badge` |
 | Update docs | Command: `/update-docs` |
+| Build UI components | Skill: `frontend-engineer` |
+| Product ideation | Skill: `starview-product-lab` |
+| Seed observatories | Skill: `seed-observatories` |
 | Run tests | `djvenv/bin/python .claude/backend/tests/<test>.py` |
