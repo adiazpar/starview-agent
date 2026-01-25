@@ -630,47 +630,38 @@ BadgeService.check_pioneer_badge(user)
 | **Special** | 1 | Photographer (25 photos) |
 | **Tenure** | 1 | Pioneer (first 100 verified users) |
 
-### Complete Badge List
+### Query Current Badges
 
-#### Exploration Badges (6)
-1. **First Light** - Visit 1 location
-2. **Explorer** - Visit 5 locations
-3. **Pathfinder** - Visit 10 locations
-4. **Stargazer** - Visit 25 locations
-5. **Celestial Navigator** - Visit 50 locations
-6. **Cosmic Voyager** - Visit 100 locations
+The database is the source of truth. Query for the current badge list:
 
-#### Contribution Badges (4)
-1. **Scout** - Add 1 location
-2. **Discoverer** - Add 5 locations
-3. **Trailblazer** - Add 10 locations
-4. **Location Legend** - Add 25 locations
+```bash
+# List all badges by category
+djvenv/bin/python manage.py shell -c "
+from starview_app.models import Badge
+for b in Badge.objects.all().order_by('category', 'tier'):
+    print(f'{b.category}: {b.name} (tier {b.tier}, {b.criteria_type}={b.criteria_value})')
+"
 
-#### Quality Badges (4)
-1. **Quality Contributor** - 3+ locations with 4+ star average
-2. **Trusted Source** - 6+ locations with 4+ star average
-3. **Stellar Curator** - 12+ locations with 4+ star average
-4. **Elite Curator** - 24+ locations with 4+ star average
+# Count badges per category
+djvenv/bin/python manage.py shell -c "
+from starview_app.models import Badge
+from django.db.models import Count
+for row in Badge.objects.values('category').annotate(count=Count('id')).order_by('category'):
+    print(f\"{row['category']}: {row['count']} badges\")
+"
+```
 
-#### Review Badges (5)
-1. **Reviewer** - Write 5 reviews
-2. **Helpful Voice** - Receive 10 upvotes
-3. **Expert Reviewer** - 25+ reviews with 75%+ helpful ratio
-4. **Trusted Critic** - 50+ reviews with 80%+ helpful ratio
-5. **Review Master** - 100+ reviews with 85%+ helpful ratio
+### Example Badges (One Per Category)
 
-#### Community Badges (5)
-1. **Conversationalist** - Comment on 10 reviews (others' reviews only)
-2. **Connector** - Have 10 followers
-3. **Influencer** - Have 50 followers
-4. **Community Leader** - Have 100 followers
-5. **Ambassador** - Have 200 followers
-
-#### Special Badges (1)
-1. **Photographer** - Upload 25 review photos
-
-#### Tenure Badges (1)
-1. **Pioneer** - First 100 verified users (by registration date)
+| Category | Example | Criteria |
+|----------|---------|----------|
+| EXPLORATION | First Light | 1 visit |
+| CONTRIBUTION | Scout | 1 location |
+| QUALITY | Quality Contributor | 3 high-rated |
+| REVIEW | Reviewer | 5 reviews |
+| COMMUNITY | Conversationalist | 10 comments |
+| SPECIAL | Photographer | 25 photos |
+| TENURE | Pioneer | First 100 users |
 
 ### Key Files
 

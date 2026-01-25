@@ -77,17 +77,28 @@ Complete documentation for Starview's badge/achievement system.
 
 ## Quick Reference
 
-### Badge Categories (26 Total)
+### Badge Categories
 
-| Category | Count | Examples |
-|----------|-------|----------|
-| **Exploration** | 6 | First Light (1 visit) → Cosmic Voyager (100 visits) |
-| **Contribution** | 4 | Scout (1 location) → Location Legend (25 locations) |
-| **Quality** | 4 | Quality Contributor (3 well-rated) → Elite Curator (24) |
-| **Review** | 5 | Reviewer (5 reviews) → Review Master (100 + 85% ratio) |
-| **Community** | 5 | Conversationalist (10 comments) → Ambassador (200 followers) |
-| **Special** | 1 | Photographer (25 photos) |
-| **Tenure** | 1 | Pioneer (first 100 verified users) |
+Query the database for the current badge count and list:
+
+```bash
+djvenv/bin/python manage.py shell -c "
+from starview_app.models import Badge
+from django.db.models import Count
+for row in Badge.objects.values('category').annotate(count=Count('id')).order_by('category'):
+    print(f\"{row['category']}: {row['count']} badges\")
+"
+```
+
+| Category | Purpose | Example |
+|----------|---------|---------|
+| **Exploration** | Visiting locations | First Light (1 visit) |
+| **Contribution** | Adding locations | Scout (1 location) |
+| **Quality** | Well-rated locations | Quality Contributor |
+| **Review** | Writing reviews | Reviewer (5 reviews) |
+| **Community** | Social engagement | Conversationalist |
+| **Special** | Unique achievements | Photographer |
+| **Tenure** | Membership milestones | Pioneer |
 
 ### Key Files & Locations
 

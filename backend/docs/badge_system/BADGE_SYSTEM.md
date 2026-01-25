@@ -1,5 +1,14 @@
 # Badge System Design for Starview
 
+> **Note:** This document is a **design reference** showing the badge system architecture and example badges. The database is the source of truth for current badges. Query with:
+> ```bash
+> djvenv/bin/python manage.py shell -c "
+> from starview_app.models import Badge
+> for b in Badge.objects.all().order_by('category', 'tier'):
+>     print(f'{b.category}: {b.name} (tier {b.tier})')
+> "
+> ```
+
 ## Overview
 Achievement/badge system to gamify user engagement and reward quality contributions to the stargazing community.
 
