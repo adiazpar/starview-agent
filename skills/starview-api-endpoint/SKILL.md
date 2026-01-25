@@ -1,6 +1,9 @@
 ---
 name: starview-api-endpoint
 description: Create or integrate API endpoints end-to-end. Use when adding new endpoints, connecting frontend to existing APIs, or resuming interrupted endpoint work. Handles backend (DRF) and frontend (services, React Query) integration with crash recovery support.
+user-invocable: true
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, EnterPlanMode, ExitPlanMode, AskUserQuestion, TodoWrite
+model: sonnet
 ---
 
 # API Endpoint Skill for Starview

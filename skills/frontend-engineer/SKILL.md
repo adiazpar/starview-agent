@@ -1,6 +1,9 @@
 ---
 name: frontend-design-engineering
 description: Create distinctive, production-grade frontend interfaces through systematic design engineering. Use when building web components, pages, dashboards, React components, HTML/CSS layouts, or styling any web UI. Combines bold creative vision with mathematical precision — typography systems, algorithmic color, fluid layouts, and cognitive UX laws. Produces memorable designs that avoid generic AI aesthetics while being structurally sound and maintainable.
+user-invocable: true
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, AskUserQuestion, TodoWrite, mcp__chrome-devtools__*
+model: opus
 ---
 
 # Frontend Design Engineering

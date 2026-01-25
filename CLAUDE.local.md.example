@@ -1,0 +1,48 @@
+# Personal Preferences (Template)
+
+Copy this file to `CLAUDE.local.md` for personal preferences that shouldn't be committed.
+
+This file is auto-gitignored and will be loaded alongside CLAUDE.md.
+
+---
+
+## My Development URLs
+
+- Local API: http://localhost:8000
+- Vite dev: http://localhost:5173
+- Production: https://your-app.com
+
+## Service Credentials Reference
+
+Document where to find credentials (don't put actual values here):
+- Render Dashboard: https://dashboard.render.com/web/srv-xxxxx
+- Cloudflare R2: See 1Password > Project > R2 Credentials
+- AWS SES: See team wiki
+
+## Personal Test Data
+
+- Test user email: mytest@example.com
+- Test location ID: 42
+
+## Shortcuts I Prefer
+
+```bash
+# My aliases
+alias dj="djvenv/bin/python manage.py"
+alias djtest="djvenv/bin/python -m pytest"
+```
+
+## Notes
+
+- I prefer verbose test output
+- Run linter before commits
+- My preferred commit style: conventional commits
+
+---
+
+## How to Use This File
+
+1. Copy to `CLAUDE.local.md` (no `.example` suffix)
+2. Customize with your personal preferences
+3. This file is gitignored - it won't be committed
+4. Claude will read this alongside CLAUDE.md

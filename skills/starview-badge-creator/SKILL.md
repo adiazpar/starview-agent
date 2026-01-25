@@ -1,7 +1,10 @@
 ---
 name: create-badge
 description: Create new badges for the Starview badge system. Use when adding badges, creating achievement badges, or implementing new badge criteria.
+user-invocable: true
 disable-model-invocation: true
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, EnterPlanMode, ExitPlanMode, AskUserQuestion, TodoWrite
+model: sonnet
 ---
 
 # Badge Creator

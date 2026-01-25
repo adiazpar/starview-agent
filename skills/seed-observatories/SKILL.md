@@ -1,6 +1,9 @@
 ---
 name: seed-observatories
 description: Orchestrated pipeline for seeding observatory locations from Wikidata with AI-validated images. Use when adding observatories to the database, seeding from Wikidata, or running the observatory seeding pipeline. Trigger phrases: "seed observatories", "add observatories", "run observatory seeder".
+user-invocable: true
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Task, AskUserQuestion, TodoWrite, mcp__chrome-devtools__*
+model: sonnet
 ---
 
 # Seed Observatories

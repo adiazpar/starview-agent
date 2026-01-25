@@ -22,17 +22,32 @@ Claude Code is a general-purpose AI coding assistant. Without context, it must r
 
 ---
 
-## Why It's a Submodule
+## Using as a Template
 
-The agent configuration lives in a separate repository for several reasons:
+This `.claude` directory is designed to be **reusable as a template** for other projects.
 
-1. **Clean separation** - Agent config evolves independently from application code
-2. **Reusability** - Same agent patterns can be adapted for other projects
-3. **Version control** - Track agent improvements separately from feature work
-4. **Smaller diffs** - Documentation updates don't clutter the main repo history
-5. **Selective updates** - Pin to stable agent versions during critical development
+### Quick Start for New Projects
 
-**Repository:** The submodule points to the `starview-agent` repository, which is updated separately and pulled into the main Starview repo as needed.
+1. Copy this directory to your new project
+2. Remove project-specific content:
+   - Delete `backend/` and `frontend/` docs (create your own)
+   - Clear `skills/starview-*` (keep generic skills)
+   - Update `CLAUDE.md` with your project context
+3. Keep the foundation:
+   - `settings.json` - Environment optimizations and hooks
+   - `rules/` - Modular rules (adapt paths for your project)
+   - `hooks/` - Documentation automation
+   - Generic skills (`code-reviewer`, `frontend-engineer`)
+
+### Template Features
+
+| Feature | Location | Purpose |
+|---------|----------|---------|
+| **Settings Optimization** | `settings.json` | Tool search, thinking tokens, permissions |
+| **Modular Rules** | `rules/` | Path-specific instructions |
+| **Documentation Hooks** | `hooks/` | Auto-tracking and reminders |
+| **Skill Framework** | `skills/` | Reusable workflow templates |
+| **MCP Configuration** | `.mcp.json` | Browser automation |
 
 ---
 
@@ -40,201 +55,277 @@ The agent configuration lives in a separate repository for several reasons:
 
 ```
 .claude/
-├── CLAUDE.md                    # Main agent instructions (Claude reads this first)
+├── CLAUDE.md                    # Main agent instructions (Claude reads first)
+├── CLAUDE.local.md.example      # Template for personal preferences
 ├── README.md                    # This file
-├── settings.json                # Hook configurations
-├── settings.local.json          # Local overrides (gitignored)
+├── settings.json                # Team settings (hooks, env, permissions)
+├── settings.local.json          # Personal overrides (gitignored)
 ├── .mcp.json                    # MCP server configurations
 │
-├── backend/
-│   ├── ARCHITECTURE.md          # Django models, views, services, APIs
-│   ├── docs/                    # Deep-dive documentation
-│   │   ├── CELERY_GUIDE.md      # Async task configuration
-│   │   ├── STORAGE_CONFIGURATION.md
-│   │   ├── RENDER_CRON_SETUP.md
-│   │   ├── LOGGING_GUIDE.md
-│   │   ├── badge_system/        # Badge system design (4 files)
-│   │   └── email_monitoring/    # AWS SES tracking (3 files)
-│   └── tests/                   # 140+ test files across 7 phases
-│
-├── frontend/
-│   ├── ARCHITECTURE.md          # React components, hooks, services
-│   ├── STYLE_GUIDE.md           # Design system (colors, typography)
-│   └── docs/
-│       ├── API_GUIDE.md         # Frontend API reference
-│       ├── MCP_WORKFLOW.md      # Browser automation guide
-│       └── PMTILES_GUIDE.md     # Light pollution tiles via R2
+├── rules/                       # Modular, path-specific rules
+│   ├── backend.md               # Python/Django conventions
+│   ├── frontend.md              # React/TypeScript conventions
+│   ├── testing.md               # Testing patterns
+│   ├── security.md              # Security requirements
+│   └── git-conventions.md       # Commit/PR standards
 │
 ├── hooks/                       # Automation scripts
 │   ├── track-changes.sh         # Logs file modifications
-│   ├── doc-reminder.sh          # Session-end documentation check
-│   ├── session-start-reminder.sh # Reminds about pending updates
-│   └── pre-commit-check.sh      # Pre-commit documentation gate
+│   ├── track-deletions.sh       # Logs file deletions
+│   ├── doc-reminder.sh          # Session-end doc check
+│   ├── session-start-reminder.sh # Pending update reminders
+│   ├── pre-commit-check.sh      # Pre-commit documentation gate
+│   └── subagent-monitor.sh      # Track subagent usage
 │
-├── commands/                    # Slash commands (/command-name)
-│   ├── update-docs.md           # Spawns Opus 4.5 to update docs
-│   └── create-badge.md          # Guided badge creation workflow
+├── skills/                      # Complex workflow guides
+│   ├── code-reviewer/           # Parallel code review (generic)
+│   ├── frontend-engineer/       # Design engineering (generic)
+│   ├── update-docs/             # Documentation sync
+│   ├── starview-api-endpoint/   # Full-stack API development
+│   ├── starview-badge-creator/  # Badge system integration
+│   ├── starview-product-lab/    # Product validation
+│   └── seed-observatories/      # Wikidata observatory seeding
 │
-└── skills/                      # Complex workflow guides
-    ├── starview-api-endpoint/   # Full-stack API development
-    ├── starview-badge-creator/  # Badge system integration
-    ├── starview-product-lab/    # Product validation, UX research
-    ├── frontend-engineer/       # Design engineering (11 reference files)
-    ├── generate-descriptions/   # AI-generated observatory descriptions
-    └── seed-observatories/      # Wikidata observatory seeding pipeline
+├── backend/                     # Backend architecture docs
+│   ├── ARCHITECTURE.md          # Models, views, services, APIs
+│   ├── tests/                   # Test files (140+ tests)
+│   └── docs/                    # Deep-dive documentation
+│
+├── frontend/                    # Frontend architecture docs
+│   ├── ARCHITECTURE.md          # Components, hooks, services
+│   ├── STYLE_GUIDE.md           # Design system
+│   └── docs/                    # Frontend-specific guides
+│
+└── plans/                       # Implementation plans
 ```
 
 ---
 
-## Available Tools
+## Settings Configuration
 
-### MCP Servers (Browser Automation)
+### Environment Optimizations (`settings.json`)
 
-Three MCP servers are configured for visual frontend development:
-
-| Server | Purpose | Key Capabilities |
-|--------|---------|------------------|
-| **chrome-devtools** | Primary browser automation | Screenshots, snapshots, console logs, network requests, performance analysis |
-| **puppeteer** | Alternative browser (incognito) | Navigation, screenshots, form filling, clicking |
-| **figma** | Design-to-code workflow | Extract design context, screenshots, Code Connect |
-
-**Usage example:**
-```
-# Take a snapshot to get element UIDs
-mcp__chrome-devtools__take_snapshot()
-
-# Navigate and screenshot
-mcp__chrome-devtools__new_page(url="http://localhost:5173")
-mcp__chrome-devtools__take_screenshot()
-
-# Check for errors
-mcp__chrome-devtools__list_console_messages()
+```json
+{
+  "env": {
+    "ENABLE_TOOL_SEARCH": "auto:5",
+    "MAX_THINKING_TOKENS": "31999",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
+  }
+}
 ```
 
-### Hooks (Automatic Behaviors)
+| Setting | Purpose |
+|---------|---------|
+| `ENABLE_TOOL_SEARCH` | Dynamic MCP tool loading (5% threshold) |
+| `MAX_THINKING_TOKENS` | Extended thinking for complex planning |
+| `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` | Trigger compaction at 70% context |
+
+### Permission Denylists
+
+The settings include deny rules to prevent accidental destructive operations:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Read(.env)",
+      "Read(**/secrets/**)"
+    ]
+  }
+}
+```
+
+### Personal Preferences
+
+Copy `CLAUDE.local.md.example` to `CLAUDE.local.md` for personal preferences:
+- Local URLs and test data
+- Personal shortcuts and aliases
+- Notes and reminders
+
+This file is auto-gitignored.
+
+---
+
+## Modular Rules System
+
+Rules in `rules/` are loaded based on file paths being worked on:
+
+```yaml
+# Example: rules/backend.md
+---
+paths:
+  - "**/starview_app/**/*.py"
+  - "**/django_project/**/*.py"
+---
+
+# Backend Rules
+- Use djvenv/bin/python for Python commands
+- Follow DOCUMENTATION_STYLE.md for comments
+```
+
+| Rule File | Applied To | Contains |
+|-----------|------------|----------|
+| `backend.md` | `*.py` files | Django/Python conventions |
+| `frontend.md` | `*.js, *.jsx, *.tsx` | React/TypeScript patterns |
+| `testing.md` | `**/tests/**` | Testing conventions |
+| `security.md` | All files | Security requirements |
+| `git-conventions.md` | All files | Commit/PR standards |
+
+---
+
+## Hooks System
 
 Hooks run automatically at specific events:
 
-| Hook | Trigger | Purpose |
-|------|---------|---------|
-| `track-changes.sh` | After Write/Edit | Logs modified files for doc tracking |
-| `session-start-reminder.sh` | Session start | Reminds about pending doc updates |
-| `doc-reminder.sh` | Session end | Shows summary of undocumented changes |
-| `pre-commit-check.sh` | Before git commit | Gates commits if docs need updating |
+| Hook | Event | Purpose |
+|------|-------|---------|
+| `track-changes.sh` | PostToolUse (Write/Edit) | Log modified files |
+| `track-deletions.sh` | PreToolUse (Bash) | Log deletions |
+| `session-start-reminder.sh` | SessionStart | Show pending updates |
+| `doc-reminder.sh` | Stop | Show undocumented changes |
+| `pre-commit-check.sh` | PreToolUse (Bash) | Gate commits |
+| `subagent-monitor.sh` | SubagentStop | Track subagent usage |
 
-### Slash Commands
+### Hook Flow
 
-Type these in Claude Code to trigger workflows:
-
-| Command | Description |
-|---------|-------------|
-| `/update-docs` | Spawns Opus 4.5 subagent to update architecture docs |
-| `/create-badge` | Guided workflow for adding new badges |
-
-### Skills
-
-Complex workflows invoked via the Skill tool:
-
-| Skill | When to Use |
-|-------|-------------|
-| `starview-api-endpoint` | Building new API endpoints (backend + frontend) |
-| `starview-badge-creator` | Adding badges to the achievement system |
-| `starview-product-lab` | Feature ideation, product validation, competitive analysis |
-| `frontend-engineer` | Distinctive frontend interfaces with design engineering |
-| `generate-descriptions` | AI-generated descriptions for observatory locations |
-| `seed-observatories` | Seed observatories from Wikidata with AI image validation |
+```
+Session Start → Check pending docs → User works → Track changes →
+Session End → Remind about updates → Next session picks up
+```
 
 ---
 
-## How the Agent Works
+## Skills
 
-### Session Flow
+### Generic Skills (Reusable)
+
+| Skill | Purpose | Frontmatter |
+|-------|---------|-------------|
+| `code-reviewer` | Parallel code review | `context: fork`, `model: sonnet` |
+| `frontend-engineer` | Design engineering with references | `model: opus` |
+| `update-docs` | Sync documentation | `context: fork`, `model: opus` |
+
+### Project-Specific Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `starview-api-endpoint` | Full-stack API development |
+| `starview-badge-creator` | Badge system integration |
+| `starview-product-lab` | Product validation with UX research |
+| `seed-observatories` | Wikidata observatory seeding |
+
+### Skill Frontmatter Reference
+
+```yaml
+---
+name: skill-name
+description: Clear description for Claude to know when to use
+user-invocable: true              # Can invoke with /skill-name
+disable-model-invocation: false   # Claude can auto-invoke
+allowed-tools: Read, Grep, Glob   # Restrict tool access
+context: fork                     # Run in isolated context
+model: sonnet                     # Override model (sonnet/opus/haiku)
+---
+```
+
+---
+
+## MCP Servers
+
+### Configured Servers
+
+| Server | Purpose | Key Tools |
+|--------|---------|-----------|
+| `chrome-devtools` | Browser automation | `take_snapshot`, `take_screenshot`, `click`, `fill` |
+
+### Chrome DevTools Usage
+
+```bash
+# Always take snapshot first to get UIDs
+mcp__chrome-devtools__take_snapshot()
+
+# Navigate
+mcp__chrome-devtools__new_page(url="http://localhost:5173")
+
+# Interact using UIDs (not CSS selectors)
+mcp__chrome-devtools__click(uid="element-uid")
+```
+
+---
+
+## Session Flow
 
 ```
 ┌─────────────────┐
 │  Session Start  │
 └────────┬────────┘
-         │
-         ▼
+         ↓
 ┌─────────────────────────────────────────┐
-│  session-start-reminder.sh runs         │
-│  Shows any pending doc updates          │
+│  session-start-reminder.sh              │
+│  Shows pending doc updates              │
 └────────┬────────────────────────────────┘
-         │
-         ▼
+         ↓
 ┌─────────────────────────────────────────┐
-│  Claude reads CLAUDE.md                 │
-│  Understands project context            │
+│  Claude reads CLAUDE.md + rules/        │
+│  Loads path-specific rules              │
 └────────┬────────────────────────────────┘
-         │
-         ▼
+         ↓
 ┌─────────────────────────────────────────┐
 │  User gives task                        │
 │  Claude uses architecture docs          │
 └────────┬────────────────────────────────┘
-         │
-         ▼
+         ↓
 ┌─────────────────────────────────────────┐
 │  Claude edits files                     │
 │  track-changes.sh logs each edit        │
+│  subagent-monitor.sh tracks subagents   │
 └────────┬────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────┐
-│  After 5 files: gentle nudge            │
-│  "Run /update-docs when done"           │
-└────────┬────────────────────────────────┘
-         │
-         ▼
+         ↓
 ┌─────────────────────────────────────────┐
 │  Session End                            │
 │  doc-reminder.sh shows summary          │
 └─────────────────────────────────────────┘
 ```
 
-### Documentation Sync
+---
 
-The agent maintains documentation parity through:
+## Plugin Configuration
 
-1. **Tracking** - Every backend/frontend file edit is logged
-2. **Reminders** - Gentle nudges at milestones (5 files) and session boundaries
-3. **Subagent** - `/update-docs` spawns an Opus 4.5 agent to analyze changes and update docs
-4. **Gating** - Pre-commit hook can block commits if docs are stale
+### LSP (Language Server Protocol)
+
+For optimal performance, enable LSP plugins for your languages:
+
+```bash
+/plugins
+```
+
+Benefits:
+- 900x faster code navigation
+- 90%+ fewer file reads
+- Automatic type error detection
 
 ---
 
-## Getting Started
+## Quick Reference
 
-### For Claude Code Users
-
-1. Clone the Starview repo (submodule auto-initializes)
-2. Open the project in Claude Code
-3. Claude automatically reads `.claude/CLAUDE.md`
-4. Ask questions or assign tasks - Claude knows the architecture
-
-### For Maintainers
-
-**Update the agent:**
-```bash
-cd .claude
-git pull origin main
-cd ..
-git add .claude
-git commit -m "Update starview-agent submodule"
-```
-
-**Test hooks locally:**
-```bash
-# Simulate session start
-.claude/hooks/session-start-reminder.sh
-
-# Check changes log
-cat .claude/hooks/.session-changes.log
-```
+| Task | What to Use |
+|------|-------------|
+| Backend work | `backend/ARCHITECTURE.md` + `rules/backend.md` |
+| Frontend work | `frontend/ARCHITECTURE.md` + `rules/frontend.md` |
+| Styling | `frontend/STYLE_GUIDE.md` |
+| Visual debugging | `frontend/docs/MCP_WORKFLOW.md` |
+| Add API endpoint | Skill: `starview-api-endpoint` |
+| Build UI components | Skill: `frontend-engineer` |
+| Review code | Skill: `code-reviewer` |
+| Update docs | Skill: `/update-docs` |
+| Run tests | `djvenv/bin/python -m pytest` |
 
 ---
 
-## Project Context
+## Project Context (Starview-Specific)
 
 **Starview** is a Django web application for stargazing location reviews:
 
@@ -248,23 +339,32 @@ cat .claude/hooks/.session-changes.log
 | Tasks | Celery (optional async) |
 | Auth | django-allauth (email + Google OAuth) |
 
-**Production:** https://starview.app
-**Status:** 98% complete | Security: A+ grade
-
 ---
 
-## Quick Reference
+## Maintenance
 
-| Task | What to Read/Use |
-|------|------------------|
-| Backend work | `backend/ARCHITECTURE.md` |
-| Frontend work | `frontend/ARCHITECTURE.md` |
-| Styling | `frontend/STYLE_GUIDE.md` |
-| Visual debugging | `frontend/docs/MCP_WORKFLOW.md` |
-| Add API endpoint | Skill: `starview-api-endpoint` |
-| Add badge | Command: `/create-badge` |
-| Update docs | Command: `/update-docs` |
-| Build UI components | Skill: `frontend-engineer` |
-| Product ideation | Skill: `starview-product-lab` |
-| Seed observatories | Skill: `seed-observatories` |
-| Run tests | `djvenv/bin/python .claude/backend/tests/<test>.py` |
+### Update the Agent
+
+```bash
+cd .claude
+git pull origin main
+cd ..
+git add .claude
+git commit -m "Update starview-agent submodule"
+```
+
+### Test Hooks
+
+```bash
+# Simulate session start
+.claude/hooks/session-start-reminder.sh
+
+# Check changes log
+cat .claude/hooks/.session-changes.log
+```
+
+### Clear Documentation Reminders
+
+```bash
+rm -f .claude/hooks/.session-changes.log
+```

@@ -1,6 +1,9 @@
 ---
 name: starview-product-lab
 description: Product validation and feature planning using UX research. Use for brainstorming, sprint planning, feature validation, or product direction. Understands natural language requests, automatically extracts relevant research, and offers tiered outputs from conceptual direction to implementation plans to GitHub tasks.
+user-invocable: true
+allowed-tools: Read, Grep, Glob, Bash, Task, AskUserQuestion, TodoWrite
+model: sonnet
 ---
 
 # Starview Product Lab

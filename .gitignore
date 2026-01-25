@@ -1,9 +1,14 @@
 # Starview Agent .gitignore
 .DS_Store
 
+# Personal preferences (not committed)
 settings.local.json
+CLAUDE.local.md
+
+# Session tracking (ephemeral)
 .session-changes.log
 pending-changes.log
+subagent.log
 
 ux-research
 plans
