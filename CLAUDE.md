@@ -30,6 +30,7 @@ Hooks track file changes and remind about documentation updates.
 
 | Skill | When to Use |
 |-------|-------------|
+| `/add-language` | Add a new language (UI + emails) |
 | `/create-badge` | Add badges (user-invoked only) |
 | `starview-api-endpoint` | Full-stack API endpoint creation |
 | `starview-product-lab` | Feature ideation, product validation |
