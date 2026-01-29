@@ -1,6 +1,6 @@
 # Starview Frontend Style Guide
 
-**Last Updated:** 2026-01-24
+**Last Updated:** 2026-01-29
 **Design System:** Observatory-themed glass-morphism (cyan/teal accent)
 **Source of Truth:** `starview_frontend/src/styles/global.css`
 
@@ -665,12 +665,46 @@ For dropdowns with close animation timing:
 
 Use with `useAnimatedDropdown` hook for coordinated close timing.
 
-### WebView Browser Fallback
+### WebView Browser & Viewport Height
 
-WebView browsers (Google app, Instagram in-app browser, etc.) have buggy viewport unit implementations. Use the `.webview-browser` class on `<html>` to provide fallbacks:
+WebView browsers (Google Search app, Instagram, Facebook, TikTok in-app browsers) have buggy viewport unit implementations where `svh` behaves like `dvh`, causing layout shifts when browser UI shows/hides during scroll.
 
+**Detection:** In `index.html`, we detect WebView browsers via user agent and add `.webview-browser` class to `<html>`:
+```javascript
+var isWebView = /GSA\/|FBAN|FBAV|Instagram|TikTok|\bwv\b|WebView/i.test(ua);
+```
+
+**The Problem:**
+- `vh` - Fixed to initial viewport, can be taller than visible area on mobile
+- `svh` - Should be stable (smallest viewport), but **broken in in-app browsers** where it acts like `dvh`
+- `dvh` - Dynamic, updates with browser UI changes → causes layout shifts
+- `lvh` - Largest viewport, may cut off content when UI shows
+
+**Our Solution:**
+1. Use plain `vh` globally (not `dvh`/`svh`/`lvh`) for stable viewport height
+2. Set `--actual-vh` CSS variable once on page load using `window.innerHeight`
+3. Only update `--actual-vh` on `orientationchange`, NOT on `resize` (browser UI changes trigger resize events)
+
+```javascript
+// From index.html - set once, update only on orientation change
+var setViewportHeight = function() {
+  document.documentElement.style.setProperty('--actual-vh', window.innerHeight + 'px');
+};
+setViewportHeight();
+
+window.addEventListener('orientationchange', function() {
+  setTimeout(setViewportHeight, 100); // Delay for browser to settle
+});
+```
+
+**Usage in CSS:**
 ```css
-/* WebView fallback - use static padding instead of viewport units */
+/* For pages needing accurate viewport height in WebViews */
+html.webview-browser .my-fullscreen-section {
+  min-height: var(--actual-vh, 100vh);
+}
+
+/* Or use static padding as fallback */
 html.webview-browser .hero-section {
   min-height: auto;
   padding-top: 80px;
@@ -678,7 +712,11 @@ html.webview-browser .hero-section {
 }
 ```
 
-The class is detected and added in `main.jsx` on app load.
+**Tradeoff:** Setting viewport height once means if page loads with browser UI visible and user scrolls (UI hides), there may be extra space at bottom. This is acceptable to prevent jarring layout shifts.
+
+**References:**
+- [Solving SVH Viewport Issues in Mobile In-App Browsers](https://medium.com/@python-javascript-php-html-css/solving-svh-viewport-issues-in-mobile-in-app-browsers-8808cb4faa3f)
+- [web.dev: The large, small, and dynamic viewport units](https://web.dev/blog/viewport-units)
 
 ---
 
